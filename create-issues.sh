@@ -8,19 +8,22 @@ if ! gh auth status &>/dev/null; then
   exit 1
 fi
 
+TMP="$(mktemp)"
+trap 'rm -f "$TMP"' EXIT
+
 # Creates an issue unless one with the same title already exists (open or closed).
 create_issue() {
-  local title="$1" body="$2"
+  local title="$1"
   if gh issue list --state all --search "\"$title\" in:title" --json title \
       --jq ".[] | select(.title == \"$title\")" | grep -q .; then
     echo "Skipping (already exists): $title"
     return
   fi
-  gh issue create --title "$title" --body "$body" --label feature
+  gh issue create --title "$title" --body-file "$TMP" --label feature
 }
 
 title="1. Project scaffolding: Rails API + React/TS + schema"
-body=$(cat <<'EOF'
+cat > "$TMP" <<'EOF'
 ## Slice
 Foundational setup — not a user-facing feature, but every later slice depends on it.
 
@@ -46,11 +49,10 @@ Foundational setup — not a user-facing feature, but every later slice depends 
 - [ ] **Mood/health CHECK enforced at the DB level** — Given a direct DB insert (bypassing app validation) with mood or health outside 1-5, when it's attempted, then Postgres rejects it
 - [ ] **TagEntries uniqueness enforced at the DB level** — Given an existing (tag_id, entry_id) pair, when a duplicate row is inserted directly, then Postgres rejects it
 EOF
-)
-create_issue "$title" "$body"
+create_issue "$title"
 
 title="2. Auth + client-side key derivation"
-body=$(cat <<'EOF'
+cat > "$TMP" <<'EOF'
 ## Slice
 Sign up, log in, and derive the client-side encryption key. This unlocks every later slice, since Entry content depends on it.
 
@@ -72,11 +74,10 @@ Sign up, log in, and derive the client-side encryption key. This unlocks every l
 - [ ] **Key never leaves the client** — Given a successful login, when the network requests are inspected, then no request body or response contains the derived encryption key
 - [ ] **Logout clears the key** — Given a logged-in session with a derived key, when the user logs out, then the key is no longer available in memory (a subsequent decrypt attempt fails without re-login)
 EOF
-)
-create_issue "$title" "$body"
+create_issue "$title"
 
 title="3. Journal CRUD (Home + Create Journal)"
-body=$(cat <<'EOF'
+cat > "$TMP" <<'EOF'
 ## Slice
 Create and list journals — the first full vertical slice. No encryption needed since a journal only has a title.
 
@@ -97,11 +98,10 @@ Create and list journals — the first full vertical slice. No encryption needed
 - [ ] **Empty state** — Given a user with zero journals, when they load Home, then the empty-state message renders instead of a blank list
 - [ ] **Blank title rejected** — Given the Create Journal form, when submitted with an empty title, then it's rejected with a validation error
 EOF
-)
-create_issue "$title" "$body"
+create_issue "$title"
 
 title="4. Entry CRUD with client-side encryption"
-body=$(cat <<'EOF'
+cat > "$TMP" <<'EOF'
 ## Slice
 Create, view, and edit entries inside a journal. Content is encrypted client-side using the key derived in slice 2.
 
@@ -125,11 +125,10 @@ Create, view, and edit entries inside a journal. Content is encrypted client-sid
 - [ ] **Mood/health range enforced at the DB level** — Given a mood or health value outside 1-5, when saved (even bypassing app validation), then the database rejects it
 - [ ] **Empty state** — Given a journal with zero entries, when opened, then the empty-state message renders
 EOF
-)
-create_issue "$title" "$body"
+create_issue "$title"
 
 title="5. Tags: select + create inline"
-body=$(cat <<'EOF'
+cat > "$TMP" <<'EOF'
 ## Slice
 Attach tags to entries, including creating a new tag without leaving the entry editor.
 
@@ -150,11 +149,10 @@ Attach tags to entries, including creating a new tag without leaving the entry e
 - [ ] **Inline tag creation** — Given the entry editor, when a new tag name and color are submitted from the modal, then it's created and immediately available in the dropdown without a page reload
 - [ ] **Duplicate tagging rejected** — Given an entry already tagged "gratitude", when the same tag is attached again, then the duplicate is rejected
 EOF
-)
-create_issue "$title" "$body"
+create_issue "$title"
 
 title="6. Delete flows: entries + journals"
-body=$(cat <<'EOF'
+cat > "$TMP" <<'EOF'
 ## Slice
 Delete journals and entries via a trash icon and a shared confirm modal.
 
@@ -174,11 +172,10 @@ Delete journals and entries via a trash icon and a shared confirm modal.
 - [ ] **Cancel is a no-op** — Given the confirm modal is open, when "Cancel" is tapped, then nothing is deleted and the modal closes
 - [ ] **Cross-user delete denied** — Given User A's entry, when User B sends a delete request for it directly via the API, then access is denied
 EOF
-)
-create_issue "$title" "$body"
+create_issue "$title"
 
 title="7. Autosave: debounce + local draft cache"
-body=$(cat <<'EOF'
+cat > "$TMP" <<'EOF'
 ## Slice
 Protect entry content against a crashed tab or accidental close while writing.
 
@@ -198,7 +195,6 @@ Protect entry content against a crashed tab or accidental close while writing.
 - [ ] **Stale save doesn't win** — Given two saves fire close together, when the older request resolves after the newer one, then the newer content is not overwritten
 - [ ] **Draft clears on confirmed save** — Given a successful server save, when it confirms, then the local draft cache is cleared
 EOF
-)
-create_issue "$title" "$body"
+create_issue "$title"
 
 echo "Done — 7 issues ensured (existing ones skipped)."
