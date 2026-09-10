@@ -8,6 +8,5 @@ class Entry < ApplicationRecord
   validates :mood, :health, presence: true, inclusion: { in: 1..5 }
   validates :entry_date, presence: true
 
-  # No fk:user — derive via journal.user to avoid the two drifting out of sync.
   delegate :user, to: :journal
 end
