@@ -153,6 +153,14 @@ bin/bundler-audit       # gem vulnerability audit
 
 Database config (`config/database.yml`) expects a local Postgres with databases `backend_development` / `backend_test`; production uses `DATABASE_URL`/`BACKEND_DATABASE_PASSWORD` env vars and splits primary/cache/queue/cable databases.
 
+Local Postgres runs in Docker (Postgres 18 — see `docker-compose.yml` at repo root), reached over TCP rather than the default domain socket:
+
+```sh
+docker compose up -d postgres   # from repo root; starts Postgres 18 on localhost:5432
+```
+
+`config/database.yml` reads connection details from `BACKEND_DATABASE_HOST`/`_PORT`/`_USERNAME`/`_PASSWORD` env vars, defaulting to `localhost:5432` / `backend` / `backend`; `docker-compose.yml` reads the same var names for its Postgres user/password, so both stay in sync if you export overrides rather than hand-editing two files.
+
 ## Frontend (`frontend/`)
 
 React 19 + TypeScript, built with Vite. All commands below are run from `frontend/`.

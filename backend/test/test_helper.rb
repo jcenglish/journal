@@ -11,5 +11,15 @@ module ActiveSupport
     fixtures :all
 
     # Add more helper methods to be used by all tests here...
+
+    # Asserts that a raw SQL statement bypassing app validations/callbacks is
+    # rejected by a Postgres-level constraint (CHECK, unique index, etc.).
+    def assert_db_constraint_violation(sql, matching:)
+      error = assert_raises(ActiveRecord::StatementInvalid) do
+        ActiveRecord::Base.connection.execute(sql)
+      end
+
+      assert_match(matching, error.message)
+    end
   end
 end
