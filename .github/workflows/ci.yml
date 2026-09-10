@@ -29,7 +29,7 @@ jobs:
       # Rails 8's generator may name these differently depending on setup.
       DATABASE_URL: postgres://postgres:postgres@localhost:5432/backend_test
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
@@ -47,7 +47,7 @@ jobs:
       run:
         working-directory: frontend
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Set up Node
         uses: actions/setup-node@v4
