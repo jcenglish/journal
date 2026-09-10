@@ -28,5 +28,21 @@ module Backend
     # Middleware like session, flash, cookies can be added back manually.
     # Skip views, helpers and assets when generating a new resource.
     config.api_only = true
+
+    # api_only strips cookies and sessions out of the middleware stack. Add back
+    # exactly those two (no flash, no CSP, no Rack::MethodOverride) so session-based
+    # auth works. See design-decisions.md for the CSRF posture this implies:
+    # SameSite=Lax + a same-origin deployment + a JSON-only body requirement,
+    # rather than a synchronizer token (ActionController::API has no CSRF module).
+    config.session_store :cookie_store,
+      key: "_journal_session",
+      same_site: :lax,
+      httponly: true,
+      secure: Rails.env.production?
+
+    # Inserted at the same positions the non-api stack uses. `middleware.use` would
+    # append them to the very bottom of the stack instead, after Rack::ETag.
+    config.middleware.insert_after ActionDispatch::Callbacks, ActionDispatch::Cookies
+    config.middleware.insert_after ActionDispatch::Cookies, config.session_store, config.session_options
   end
 end

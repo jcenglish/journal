@@ -1,10 +1,18 @@
-import './App.css'
+import { AuthPage } from './pages/AuthPage'
+import { useAuth } from './hooks/useAuth'
 
 function App() {
+  const { user, logOut } = useAuth()
+
+  if (!user) return <AuthPage />
+
+  // Placeholder until slice 3 brings the Journals list and a router.
   return (
     <main>
-      <h1>Journal</h1>
-      <p>Frontend scaffolding is up and running.</p>
+      <p>Signed in as {user.email}</p>
+      <button type="button" onClick={() => void logOut()}>
+        Log out
+      </button>
     </main>
   )
 }
