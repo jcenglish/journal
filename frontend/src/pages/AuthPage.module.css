@@ -1,0 +1,141 @@
+/* Every value comes from the baseline custom properties in index.css, so the
+   real design system can swap them wholesale later. Mobile-first: this layout
+   is a single column at every width, capped for larger screens. */
+
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  max-width: 420px;
+  margin: 0 auto;
+  padding: var(--space-6) var(--space-4);
+}
+
+.header {
+  text-align: center;
+}
+
+.title {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 600;
+}
+
+.subtitle {
+  margin: var(--space-1) 0 0;
+  font-style: italic;
+  color: var(--color-text-muted);
+}
+
+.modes {
+  display: flex;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.legend {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+.mode {
+  flex: 1;
+}
+
+/* Visually hidden but still focusable, so the styled span can stand in for it
+   while keyboard and screen-reader behaviour stay native. */
+.modeInput {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.modeText {
+  display: block;
+  padding: var(--space-3);
+  text-align: center;
+  color: var(--color-text);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.modeInput:checked + .modeText {
+  background: var(--color-surface);
+  border-color: var(--color-text-muted);
+  font-weight: 600;
+}
+
+.modeInput:focus-visible + .modeText {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 1px;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.label {
+  font-size: 14px;
+  color: var(--color-text-muted);
+}
+
+.input {
+  padding: var(--space-3);
+  font: inherit;
+  color: var(--color-text);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.input:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 1px;
+}
+
+.submit {
+  padding: var(--space-3);
+  font: inherit;
+  font-weight: 600;
+  color: var(--color-bg);
+  background: var(--color-accent);
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.submit:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.error {
+  margin: 0;
+  padding: var(--space-3);
+  font-size: 14px;
+  background: var(--color-surface);
+  border-radius: var(--radius-sm);
+}
+
+.warning {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--color-text-muted);
+}
