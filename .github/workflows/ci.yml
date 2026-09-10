@@ -52,7 +52,10 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v7
         with:
-          node-version: 20
+          # Read from frontend/.nvmrc so CI and local can't drift — vitest and
+          # jsdom both require Node 22.x, and Node 20 fails at runtime rather
+          # than at install. Mirrors how the backend job reads .ruby-version.
+          node-version-file: frontend/.nvmrc
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 
