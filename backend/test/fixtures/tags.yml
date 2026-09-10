@@ -1,11 +1,15 @@
 # Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+#
+# content holds client-side encrypted ciphertext in the real app (color does not,
+# it's just a swatch) — the content placeholder is deliberately ciphertext-shaped,
+# not readable text. See CLAUDE.md's Security & encryption section.
 
 one:
-  content: MyString
+  content: ciphertext-content-one
   color: MyString
   user: one
 
 two:
-  content: MyString
+  content: ciphertext-content-two
   color: MyString
   user: two

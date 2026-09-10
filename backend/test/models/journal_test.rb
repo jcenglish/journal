@@ -2,7 +2,7 @@ require "test_helper"
 
 class JournalTest < ActiveSupport::TestCase
   test "valid with a title and user" do
-    journal = Journal.new(title: "My Journal", user: users(:one))
+    journal = Journal.new(title: "ciphertext-title", user: users(:one))
 
     assert journal.valid?
   end
@@ -14,7 +14,7 @@ class JournalTest < ActiveSupport::TestCase
   end
 
   test "invalid without a user" do
-    journal = Journal.new(title: "My Journal")
+    journal = Journal.new(title: "ciphertext-title")
 
     assert_not journal.valid?
   end

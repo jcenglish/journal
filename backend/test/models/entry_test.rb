@@ -6,7 +6,7 @@ class EntryTest < ActiveSupport::TestCase
     # the model can't and shouldn't validate the underlying rating's range. See
     # CLAUDE.md's Security & encryption section.
     entry = Entry.new(
-      content: "Today was fine.",
+      content: "ciphertext-content",
       mood: "ciphertext-mood",
       health: "ciphertext-health",
       entry_date: Date.current,
@@ -18,7 +18,7 @@ class EntryTest < ActiveSupport::TestCase
 
   test "invalid when mood or health is blank" do
     entry = Entry.new(
-      content: "Today was fine.",
+      content: "ciphertext-content",
       mood: "",
       health: "ciphertext-health",
       entry_date: Date.current,

@@ -3,9 +3,9 @@ require "test_helper"
 class TagEntryTest < ActiveSupport::TestCase
   test "valid with a unique tag/entry pair belonging to the same user" do
     other_entry = Entry.new(
-      content: "Another entry.",
-      mood: 3,
-      health: 3,
+      content: "ciphertext-content-other",
+      mood: "ciphertext-mood-other",
+      health: "ciphertext-health-other",
       entry_date: Date.current,
       journal: journals(:one) # same user as tags(:one)
     )
