@@ -16,18 +16,18 @@ Domain models, controllers, routes, and components are being built incrementally
 ## Data model
 
 - **User** — `password_digest` (`has_secure_password`), `email`.
-- **Journal** — `title`, `fk:user`. Single-user only, not collaborative. Cover image via Active Storage (`has_one_attached`) — deferred, not in MVP scope.
-- **Entry** — `content`, `title` (optional), `mood` (1–5), `health` (1–5), `entry_date` (distinct from `created_at` — entries are often backdated), `fk:journal`. **No `fk:user`** — derive via `entry.journal.user` to avoid the two drifting out of sync. Images via Active Storage (`has_many_attached`) — deferred, not in MVP scope.
-- **Tag** — `content`, `color`, `fk:user`. Scoped per user, not global.
+- **Journal** — `title` (`string`, client-side encrypted — see Security below), `fk:user`. Single-user only, not collaborative. Cover image via Active Storage (`has_one_attached`) — deferred, not in MVP scope.
+- **Entry** — `content`, `title` (optional), `mood`, `health`, `entry_date` (distinct from `created_at` — entries are often backdated), `fk:journal`. **No `fk:user`** — derive via `entry.journal.user` to avoid the two drifting out of sync. Images via Active Storage (`has_many_attached`) — deferred, not in MVP scope. **`content`, `title`, `mood`, and `health` are all client-side encrypted** (see Security below) — `mood`/`health` are `string` columns holding ciphertext, **not `integer`**; the underlying 1–5 rating only ever exists in plaintext client-side, before encryption.
+- **Tag** — `content` (`string`, client-side encrypted — see Security below), `color`, `fk:user`. Scoped per user, not global.
 - **TagEntries** — `fk:tag`, `fk:entry`. Unique composite index on `(tag_id, entry_id)`.
-- **DB-level constraints**: `CHECK` on `mood` and `health` (1–5) at the Postgres level, not just app validations.
+- **DB-level constraints**: unique composite index on `TagEntries(tag_id, entry_id)`. There is **no DB-level range check on `mood`/`health`** — now that they're encrypted, the column holds an opaque string, so Postgres can't range-check it; validation that a rating is 1–5 happens client-side only, before encryption. Don't reintroduce an `integer` type or a `CHECK` on these columns — the app will fail to save any entry the moment that happens.
 
 ## Security & encryption
 
-This app uses **zero-knowledge, client-side encryption** for entry content — not Rails' built-in `encrypts`. The server must never receive plaintext entry content or the key that protects it.
+This app uses **zero-knowledge, client-side encryption** for `Entry.content`, `Entry.title`, `Entry.mood`, `Entry.health`, `Journal.title`, and `Tag.content` — not Rails' built-in `encrypts`. The server must never receive plaintext for any of these, or the key that protects them. Plaintext stays server-side only for what functionally requires it: `entry_date` (chronological sort/backdating), `Tag.color`, foreign keys/timestamps, and `User.email` (needed for login lookup).
 
 - On login, derive an encryption key from the user's password client-side (Web Crypto API) and hold it in memory for the session only.
-- Encrypt entry content in the browser before sending it to the server; decrypt in the browser when displaying it.
+- Encrypt each of the fields listed above in the browser before sending it to the server; decrypt client-side when displaying it. None of them are exceptions carved out for server-side convenience — a mood/health rating or a tag name is just as capable of leaking sensitive information as entry content is.
 - There is no password reset. Losing the password means losing the data. This must be stated clearly on the Auth screen — don't let this be a silent gap.
 - Search cannot use SQL (`LIKE`/`ILIKE`) against encrypted content. When search is built (post-MVP), it uses client-side blind indexing (hashed tokens generated and uploaded from the browser) — see `design-decisions.md`.
 - **Every backend query must be scoped to `current_user`** (e.g., `current_user.journals.find(params[:id])`, never a bare `Journal.find`). This is the standard IDOR risk and matters even more here since encryption doesn't help if authorization is broken. Backend request specs should include at least one test per resource asserting a user cannot access another user's data.
