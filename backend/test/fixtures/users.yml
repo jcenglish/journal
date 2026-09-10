@@ -1,9 +1,17 @@
 # Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+#
+# password_digest holds bcrypt("password123") at MIN_COST to keep the suite fast.
+# Note that "password123" is not semantically a password: the backend is agnostic
+# about what it bcrypts, and in production the browser sends a 44-char derived
+# auth hash rather than the password itself. encrypted_data_key is likewise a
+# stand-in for a real wrapped key — the server never interprets it.
 
 one:
   email: one@example.com
-  password_digest: MyString
+  password_digest: <%= BCrypt::Password.create("password123", cost: BCrypt::Engine::MIN_COST) %>
+  encrypted_data_key: AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
 
 two:
   email: two@example.com
-  password_digest: MyString
+  password_digest: <%= BCrypt::Password.create("password123", cost: BCrypt::Engine::MIN_COST) %>
+  encrypted_data_key: AgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
