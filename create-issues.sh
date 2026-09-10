@@ -32,21 +32,20 @@ Foundational setup — not a user-facing feature, but every later slice depends 
 - React + TypeScript frontend (Vite)
 - Migrations + models for User, Journal, Entry, Tag, TagEntries per the finalized schema:
   - User: password_digest (has_secure_password), email
-  - Journal: title, fk:user
-  - Entry: content, title (optional), mood (1-5), health (1-5), entry_date, fk:journal — no fk:user (derive via journal.user)
-  - Tag: content, color, fk:user (scoped per user)
+  - Journal: title (string — holds client-side-encrypted ciphertext), fk:user
+  - Entry: content, title (optional), mood, health (all four are strings holding client-side-encrypted ciphertext — **not** integers for mood/health, since the server never sees the plaintext 1-5 rating), entry_date, fk:journal — no fk:user (derive via journal.user)
+  - Tag: content (string — holds client-side-encrypted ciphertext), color, fk:user (scoped per user)
   - TagEntries: fk:tag, fk:entry, unique composite index on (tag_id, entry_id)
-- DB-level CHECK constraints: mood and health between 1 and 5
+- DB-level constraint: unique composite index on TagEntries(tag_id, entry_id). There is deliberately **no** Postgres CHECK on mood/health — they hold ciphertext, not a number, so a numeric range can't be enforced at the DB level; the 1-5 rating is validated client-side only, before encryption.
 - CLAUDE.md documenting stack, conventions (TypeScript, CSS modules), and schema
 
 ## Acceptance criteria
 - [ ] Both apps boot locally
 - [ ] All five models + migrations exist and match the schema above
-- [ ] DB constraints enforced at the Postgres level, not just app validations
+- [ ] TagEntries uniqueness enforced at the Postgres level, not just app validation
 - [ ] CLAUDE.md committed
 
 ## Test cases
-- [ ] **Mood/health CHECK enforced at the DB level** — Given a direct DB insert (bypassing app validation) with mood or health outside 1-5, when it's attempted, then Postgres rejects it
 - [ ] **TagEntries uniqueness enforced at the DB level** — Given an existing (tag_id, entry_id) pair, when a duplicate row is inserted directly, then Postgres rejects it
 EOF
 create_issue "$title"
@@ -79,11 +78,11 @@ create_issue "$title"
 title="3. Journal CRUD (Home + Create Journal)"
 cat > "$TMP" <<'EOF'
 ## Slice
-Create and list journals — the first full vertical slice. No encryption needed since a journal only has a title.
+Create and list journals — the first full vertical slice. Journal.title is client-side encrypted, same as Entry content/title, so the Home screen must decrypt titles to render the list.
 
 ## Scope
-- Home screen: list of the current user's journals
-- Create Journal screen: title field only (cover image deferred — see backlog)
+- Home screen: list of the current user's journals — titles are decrypted client-side to render the list, since Journal.title is ciphertext server-side
+- Create Journal screen: title field only (cover image deferred — see backlog). Title is encrypted client-side before it's sent to the server
 - Backend: Journal create + index endpoints, scoped to current_user
 - Empty state: "No journals yet — tap + to create your first one."
 
@@ -91,38 +90,40 @@ Create and list journals — the first full vertical slice. No encryption needed
 - [ ] Can create a journal and see it in the list
 - [ ] Journals are scoped to the logged-in user (no cross-user access)
 - [ ] Empty state renders when a user has no journals
+- [ ] Journal title is unreadable directly in the database (encrypted at rest)
 
 ## Test cases
-- [ ] **Create and list** — Given a logged-in user, when they submit a title, then a journal is created and appears in their Journals list
+- [ ] **Create and list** — Given a logged-in user, when they submit a title, then a journal is created and appears in their Journals list (decrypted client-side)
+- [ ] **Title is encrypted at rest** — Given a saved journal, when the database is queried directly, then the title column does not contain the readable title
 - [ ] **Cross-user access denied** — Given two users each with a journal, when User A requests User B's journal by ID, then the response denies access, not the journal data
 - [ ] **Empty state** — Given a user with zero journals, when they load Home, then the empty-state message renders instead of a blank list
-- [ ] **Blank title rejected** — Given the Create Journal form, when submitted with an empty title, then it's rejected with a validation error
+- [ ] **Blank title rejected client-side** — Given the Create Journal form, when submitted with an empty title, then it's rejected before encryption/sending — there's no server-side blank check, since the server only ever sees ciphertext
 EOF
 create_issue "$title"
 
 title="4. Entry CRUD with client-side encryption"
 cat > "$TMP" <<'EOF'
 ## Slice
-Create, view, and edit entries inside a journal. Content is encrypted client-side using the key derived in slice 2.
+Create, view, and edit entries inside a journal. Content, title, mood, and health are all encrypted client-side using the key derived in slice 2.
 
 ## Scope
-- Journal detail screen: entries list (paged)
+- Journal detail screen: entries list (paged) — titles are decrypted client-side to render the list, since Entry.title is ciphertext server-side
 - Create/Edit Entry screen (same screen for both, pre-filled when editing): date, title (optional), content (TipTap Simple Editor template — text + images only, no block-based UI), mood selector (1-5), health selector (1-5)
-- Content is encrypted client-side before it's sent to the server; decrypted client-side when displayed
+- Content, title, mood, and health are encrypted client-side before being sent to the server; decrypted client-side when displayed. Mood/health are validated as 1-5 client-side before encryption — there's no server-side or DB-level check, since the server only ever sees ciphertext for these fields
 - Backend: Entry create/show/update endpoints, scoped to current_user via journal
 - Image upload is deferred — not in scope for this slice
 
 ## Acceptance criteria
 - [ ] Can create, view, and edit an entry
-- [ ] Entry content is unreadable directly in the database (encrypted at rest)
+- [ ] Entry content, title, mood, and health are all unreadable directly in the database (encrypted at rest)
 - [ ] Mood/health selectors save and redisplay correctly
 - [ ] Empty state: "No entries yet."
 
 ## Test cases
-- [ ] **Content is encrypted at rest** — Given a saved entry, when the database is queried directly, then the content column does not contain readable plaintext
-- [ ] **Round-trip correctness** — Given a saved entry, when the same user reopens it, then the content decrypts and displays correctly
+- [ ] **Content, title, mood, and health are encrypted at rest** — Given a saved entry, when the database is queried directly, then none of these four columns contain readable plaintext
+- [ ] **Round-trip correctness** — Given a saved entry, when the same user reopens it, then all four fields decrypt and display correctly
 - [ ] **Cross-user access denied** — Given User A's entry, when User B requests it by ID, then access is denied
-- [ ] **Mood/health range enforced at the DB level** — Given a mood or health value outside 1-5, when saved (even bypassing app validation), then the database rejects it
+- [ ] **Out-of-range mood/health rejected client-side** — Given the entry editor, when a mood or health value outside 1-5 is submitted (bypassing the UI selector), then the client rejects it before encrypting/sending — there is no DB-level backstop for this, since the column holds ciphertext
 - [ ] **Empty state** — Given a journal with zero entries, when opened, then the empty-state message renders
 EOF
 create_issue "$title"
@@ -133,8 +134,8 @@ cat > "$TMP" <<'EOF'
 Attach tags to entries, including creating a new tag without leaving the entry editor.
 
 ## Scope
-- Tags field in the Entry editor: dropdown of existing tags (scoped to current user) + "+ New tag" option
-- New Tag modal: name + color, Cancel/Create
+- Tags field in the Entry editor: dropdown of existing tags (scoped to current user) + "+ New tag" option. Tag names are encrypted client-side — fetch the user's (small, per-user) tag list and decrypt client-side to populate the dropdown, rather than filtering/searching by name server-side
+- New Tag modal: name + color, Cancel/Create. Name is encrypted client-side before it's sent to the server
 - Backend: Tag CRUD scoped per user, TagEntries join written on save
 - Dedicated Tag Manager view is deferred — see backlog
 
@@ -143,11 +144,13 @@ Attach tags to entries, including creating a new tag without leaving the entry e
 - [ ] Can create a new tag from the entry editor without leaving the screen
 - [ ] Tags are private to each user (not shared across accounts)
 - [ ] Duplicate tagging of the same entry is prevented (unique index)
+- [ ] Tag names are unreadable directly in the database (encrypted at rest)
 
 ## Test cases
 - [ ] **Tags are per-user** — Given a tag owned by User A, when User B opens their own entry editor, then User A's tag does not appear in User B's dropdown
 - [ ] **Inline tag creation** — Given the entry editor, when a new tag name and color are submitted from the modal, then it's created and immediately available in the dropdown without a page reload
 - [ ] **Duplicate tagging rejected** — Given an entry already tagged "gratitude", when the same tag is attached again, then the duplicate is rejected
+- [ ] **Tag content is encrypted at rest** — Given a saved tag, when the database is queried directly, then the content column does not contain the readable tag name
 EOF
 create_issue "$title"
 

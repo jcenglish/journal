@@ -1,0 +1,21 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+# content/title/mood/health hold client-side encrypted ciphertext in the real app —
+# these placeholder values are deliberately ciphertext-shaped, not readable text, so
+# this fixture doesn't quietly contradict the zero-knowledge design. See CLAUDE.md's
+# Security & encryption section.
+one:
+  content: ciphertext-content-one
+  title: ciphertext-title-one
+  mood: ciphertext-mood-one
+  health: ciphertext-health-one
+  entry_date: 2026-09-09
+  journal: one
+
+two:
+  content: ciphertext-content-two
+  title: ciphertext-title-two
+  mood: ciphertext-mood-two
+  health: ciphertext-health-two
+  entry_date: 2026-09-09
+  journal: two

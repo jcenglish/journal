@@ -70,7 +70,7 @@ A running record of technical decisions, why they were made, and what was consid
 - **Decision:** Add a Postgres CHECK constraint enforcing `mood` and `health` are between 1 and 5. Add a unique composite index on `TagEntries(tag_id, entry_id)`.
 - **Context:** App-level validations alone don't stop bad data from entering the database directly — DB constraints are the actual guarantee. The unique index prevents duplicate taggings of the same entry.
 - **Alternatives considered:** App-level validation only.
-- **Status:** Decided
+- **Status:** Superseded (2026-09-10) — the mood/health CHECK no longer applies now that both columns are encrypted (`string`, not `integer`); see the 2026-09-10 encryption-scope entry below. The TagEntries unique index is unaffected and still stands.
 
 ### 2026-09-06 — Autosave: debounced save + local draft cache
 
@@ -117,6 +117,22 @@ A running record of technical decisions, why they were made, and what was consid
 - **Alternatives considered:** Keep BlockNote (rejected — more surface area than needed). Milkdown (markdown-text-first, an even closer conceptual match to Bear, but a less mature ecosystem for this use case).
 - **Status:** Decided
 
+### 2026-09-10 — Entry.title is client-side encrypted too, not just content
+
+- **Decision:** `Entry.title` is encrypted client-side with the same key as `content`, not stored as plaintext.
+- **Context:** Title is optional free text the user writes (e.g. "Therapy notes — divorce") and is just as capable of leaking sensitive information as `content`. The original zero-knowledge decision only named `content` explicitly; this closes that gap rather than leaving title as an unintentional plaintext exception to an otherwise zero-knowledge design.
+- **Trade-off accepted:** Title can no longer be sorted, filtered, or previewed server-side (e.g. in an admin view or a lightweight list endpoint) — the same limitation `content` already has. Entries lists must decrypt client-side to show titles.
+- **Alternatives considered:** Leave title as plaintext for server-side convenience (rejected — undermines the zero-knowledge claim for a field that carries the same risk profile as content).
+- **Status:** Decided
+
+### 2026-09-10 — Encryption scope extended to Journal.title, Entry.mood/health, and Tag.content
+
+- **Decision:** `Journal.title`, `Entry.mood`, `Entry.health`, and `Tag.content` (the tag name) are all client-side encrypted with the same key as `Entry.content`/`Entry.title`. Plaintext fields remaining server-side: `entry_date`, `Tag.color`, all foreign keys and timestamps, `User.email`.
+- **Context:** A field-by-field review turned up an internal contradiction: the "AI-generated mood trend message" backlog entry already assumed "mood is already decrypted client-side to render entries," while the schema and the "Mood/health trend charts" backlog entry assumed the opposite — plaintext mood/health queryable server-side. Mood/health ratings are health-adjacent data and just as sensitive as entry content; leaving them plaintext meant a DB compromise could chart a user's mood/health history without ever touching content. Journal.title carries the identical risk already accepted for Entry.title (a user-chosen label like "Divorce planning" or "Therapy"). Tag.content is short, categorical, and arguably more scannable in bulk than a title ("therapy", "grief", "job search").
+- **Trade-off accepted:** None of these can be queried, sorted, or aggregated server-side anymore. Concretely: the Home screen decrypts journal titles client-side to render the list; mood/health trend charts (backlog) must be computed client-side over already-decrypted entries rather than via a server-side SQL aggregate — still cheap, just moves the math into JS. Tag dropdown and tag-based filtering fetch the user's (small, per-user) tag list and decrypt client-side rather than filtering via SQL — see Feature Backlog updates below. `mood` and `health` change column type from `integer` to `string` (they now hold ciphertext, not a number), which makes the Postgres `CHECK (mood BETWEEN 1 AND 5)` from the 2026-09-05 entry impossible to keep — a range check can't apply to an opaque encrypted string. This isn't a weakened version of that guarantee, it's the same posture `content`/`title` already have (no DB-level format validation at all); range validation becomes client-side only, before encryption.
+- **Alternatives considered:** Leave mood/health plaintext to keep trend-chart aggregation server-side (rejected — the whole point of zero-knowledge is that health-adjacent ratings shouldn't be readable without the key any more than content should). Leave Tag.content plaintext since tag lists are small (rejected — small doesn't mean non-sensitive; a plaintext tag vocabulary alone can reveal a user's life circumstances without decrypting a single entry).
+- **Status:** Decided
+
 ---
 
 ## Open Questions
@@ -137,9 +153,7 @@ Captured ideas, not commitments. Won't build all of these — keeping them writt
 
 ### Low-effort, fits current schema
 
-- **Mood/health trend charts** — line chart over existing mood/health ratings on Entry.
 - **"On this day" view** — surface entries from a year/month ago on today's date.
-- **Search/filter entries by tag** — Tag + TagEntries already support this; mostly a UI addition.
 - **Streaks/reminders** — consecutive-day tracking plus a daily nudge notification.
 
 ### Differentiators, fit the zero-knowledge direction
@@ -147,6 +161,8 @@ Captured ideas, not commitments. Won't build all of these — keeping them writt
 - **Export/backup** — client-side decrypt-and-download of entries (JSON/Markdown). Also doubles as a partial mitigation for "lost my key."
 - **App-level lock** — PIN/biometric on top of login, auto-lock after inactivity.
 - **Multiple journals per user** — schema (Journal as its own table) already supports this; mainly a UI addition.
+- **Mood/health trend charts** — now that mood/health are encrypted, this is a client-side rolling-average calc over already-decrypted entries rather than a server-side SQL aggregate (same "detection is free, already decrypted" reasoning as the AI mood trend idea below).
+- **Search/filter entries by tag** — Tag content is now encrypted, so this is client-side filtering over the user's decrypted tag list (small, per-user — no blind indexing needed) rather than a server-side SQL join.
 
 ### Conflicts with zero-knowledge — decide consciously before building
 

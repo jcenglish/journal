@@ -1,0 +1,13 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+#
+# title holds client-side encrypted ciphertext in the real app — these placeholder
+# values are deliberately ciphertext-shaped, not readable text. See CLAUDE.md's
+# Security & encryption section.
+
+one:
+  title: ciphertext-title-one
+  user: one
+
+two:
+  title: ciphertext-title-two
+  user: two

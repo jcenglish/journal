@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:18
+    environment:
+      # Same var names/defaults as backend/config/database.yml, so exporting
+      # BACKEND_DATABASE_USERNAME/PASSWORD before `docker compose up` keeps
+      # both in sync instead of hand-editing two files.
+      POSTGRES_USER: ${BACKEND_DATABASE_USERNAME:-backend}
+      POSTGRES_PASSWORD: ${BACKEND_DATABASE_PASSWORD:-backend}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U backend"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  postgres-data:
