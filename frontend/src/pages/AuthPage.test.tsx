@@ -117,6 +117,10 @@ describe('AuthPage', () => {
     expect(body.session.password).toHaveLength(44)
     expect(body.session.password).not.toBe(PASSWORD)
     expect(JSON.stringify(init)).not.toContain(PASSWORD)
+
+    // Let the login finish before the test ends. Otherwise the unwrap resolves
+    // after afterEach has cleared the key and plants one in the next test.
+    await waitFor(() => expect(hasDataKey()).toBe(true))
   })
 
   it('posts to the signup endpoint with a wrapped data key when signing up', async () => {
@@ -137,6 +141,8 @@ describe('AuthPage', () => {
     expect(String(path)).toBe('/api/signup')
     expect(body.user.encrypted_data_key).toBeTruthy()
     expect(JSON.stringify(init)).not.toContain(PASSWORD)
+
+    await waitFor(() => expect(hasDataKey()).toBe(true))
   })
 
   it('never writes anything to browser storage on a successful login', async () => {

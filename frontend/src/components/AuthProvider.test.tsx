@@ -149,6 +149,10 @@ describe('AuthProvider', () => {
       expect(posted).toBeDefined()
       expect(JSON.parse(String(posted![1]?.body)).session.email).toBe(EMAIL)
     })
+
+    // Settle the login inside this test, so its unwrap can't set a key after
+    // afterEach has cleared it.
+    await waitFor(() => expect(hasDataKey()).toBe(true))
   })
 
   it('holds no key when login is rejected', async () => {
