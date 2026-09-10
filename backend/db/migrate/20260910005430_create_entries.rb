@@ -3,15 +3,15 @@ class CreateEntries < ActiveRecord::Migration[8.1]
     create_table :entries do |t|
       t.text :content, null: false
       t.string :title
-      t.integer :mood, null: false
-      t.integer :health, null: false
+      # mood/health hold client-side encrypted ciphertext, not a plain 1-5 integer —
+      # the server never sees the plaintext rating, so no DB-level range check is
+      # possible here. See CLAUDE.md's Security & encryption section.
+      t.string :mood, null: false
+      t.string :health, null: false
       t.date :entry_date, null: false
       t.references :journal, null: false, foreign_key: true
 
       t.timestamps
     end
-
-    add_check_constraint :entries, "mood BETWEEN 1 AND 5", name: "mood_range_check"
-    add_check_constraint :entries, "health BETWEEN 1 AND 5", name: "health_range_check"
   end
 end

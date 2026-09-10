@@ -18,14 +18,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_10_010446) do
     t.text "content", null: false
     t.datetime "created_at", null: false
     t.date "entry_date", null: false
-    t.integer "health", null: false
+    t.string "health", null: false
     t.bigint "journal_id", null: false
-    t.integer "mood", null: false
+    t.string "mood", null: false
     t.string "title"
     t.datetime "updated_at", null: false
     t.index ["journal_id", "entry_date"], name: "index_entries_on_journal_id_and_entry_date"
-    t.check_constraint "health >= 1 AND health <= 5", name: "health_range_check"
-    t.check_constraint "mood >= 1 AND mood <= 5", name: "mood_range_check"
   end
 
   create_table "journals", force: :cascade do |t|
