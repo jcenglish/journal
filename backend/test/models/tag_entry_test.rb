@@ -1,8 +1,15 @@
 require "test_helper"
 
 class TagEntryTest < ActiveSupport::TestCase
-  test "valid with a unique tag/entry pair" do
-    tag_entry = TagEntry.new(tag: tags(:one), entry: entries(:two))
+  test "valid with a unique tag/entry pair belonging to the same user" do
+    other_entry = Entry.new(
+      content: "Another entry.",
+      mood: 3,
+      health: 3,
+      entry_date: Date.current,
+      journal: journals(:one) # same user as tags(:one)
+    )
+    tag_entry = TagEntry.new(tag: tags(:one), entry: other_entry)
 
     assert tag_entry.valid?
   end
@@ -11,6 +18,13 @@ class TagEntryTest < ActiveSupport::TestCase
     tag_entry = TagEntry.new(tag: tags(:one), entry: entries(:one))
 
     assert_not tag_entry.valid?
+  end
+
+  test "invalid when the tag and entry belong to different users" do
+    tag_entry = TagEntry.new(tag: tags(:one), entry: entries(:two))
+
+    assert_not tag_entry.valid?
+    assert_includes tag_entry.errors[:tag], "must belong to the same user as the entry"
   end
 
   test "(tag_id, entry_id) uniqueness is enforced at the DB level, not just app validation" do

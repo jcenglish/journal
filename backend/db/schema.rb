@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_10_005432) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_10_010446) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -23,7 +23,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_10_005432) do
     t.integer "mood", null: false
     t.string "title"
     t.datetime "updated_at", null: false
-    t.index ["journal_id"], name: "index_entries_on_journal_id"
+    t.index ["journal_id", "entry_date"], name: "index_entries_on_journal_id_and_entry_date"
     t.check_constraint "health >= 1 AND health <= 5", name: "health_range_check"
     t.check_constraint "mood >= 1 AND mood <= 5", name: "mood_range_check"
   end
@@ -41,6 +41,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_10_005432) do
     t.bigint "entry_id", null: false
     t.bigint "tag_id", null: false
     t.datetime "updated_at", null: false
+    t.index ["entry_id"], name: "index_tag_entries_on_entry_id"
     t.index ["tag_id", "entry_id"], name: "index_tag_entries_on_tag_id_and_entry_id", unique: true
   end
 
