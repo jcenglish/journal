@@ -93,7 +93,7 @@ Define these once as CSS custom properties and reference them from every compone
 Every slice must be verifiable, not just "looks done" — this is how Claude closes its own loop instead of relying on you to catch mistakes.
 
 - **Backend**: write or update Minitest tests for new models/controllers, including at least one request spec per resource asserting cross-user access is denied (see Security above). Run `bin/ci`; it must pass before the slice is complete.
-- **Frontend**: there's no test runner yet — set one up (Vitest + React Testing Library) as part of whichever slice first needs a component test, rather than deferring it further. Once it exists, write tests for new components and run them, plus `npm run build` and `npm run lint`, before the slice is complete.
+- **Frontend**: Vitest + React Testing Library are set up (slice 2). Write tests for new components and run `npm run test`, plus `npm run build` and `npm run lint`, before the slice is complete. Vitest runs with `globals: false`, so test files import `describe`/`it`/`expect`/`vi` from `vitest` explicitly; `src/test/setup.ts` registers Testing Library's cleanup and polyfills Web Crypto, which jsdom doesn't implement.
 - **Show the evidence**: paste the actual test output or command result confirming a pass, don't just assert "tests pass."
 - Run `/code-review` on the diff after tests pass, before opening the PR.
 
@@ -166,12 +166,14 @@ docker compose up -d postgres   # from repo root; starts Postgres 18 on localhos
 React 19 + TypeScript, built with Vite. All commands below are run from `frontend/`.
 
 ```sh
-npm run dev        # Vite dev server with HMR
-npm run build       # tsc -b (project references, type-check only) then vite build
-npm run lint        # eslint .
-npm run preview     # preview a production build
+npm run dev        # Vite dev server with HMR (proxies /api to localhost:3000)
+npm run build      # tsc -b (project references, type-check only) then vite build
+npm run test       # vitest run
+npm run test:watch # vitest in watch mode
+npm run lint       # eslint .
+npm run preview    # preview a production build
 ```
 
-There is no test runner configured yet — add Vitest + React Testing Library when the first component tests are needed rather than deferring indefinitely.
+The dev server proxies `/api` to the Rails server on port 3000 so the browser stays on one origin and the session cookie works without CORS — run `bin/dev` in `backend/` alongside `npm run dev`.
 
 ESLint config (`eslint.config.js`) is flat-config based: `@eslint/js` recommended + `typescript-eslint` recommended + `eslint-plugin-react-hooks` + `eslint-plugin-react-refresh` (Vite variant). Type-aware lint rules are not enabled (see `frontend/README.md` for how to add `tseslint.configs.recommendedTypeChecked`/`strictTypeChecked` if needed later).

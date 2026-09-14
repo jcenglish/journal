@@ -22,5 +22,9 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src"]
+  "include": ["src"],
+  // Tests are checked by tsconfig.test.json instead: they need Node's types for
+  // the Web Crypto polyfill, and pulling those in here would let `process.env`
+  // or `Buffer` type-check cleanly in a component and then fail in the browser.
+  "exclude": ["src/**/*.test.ts", "src/**/*.test.tsx", "src/test"]
 }
