@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+# Warns before committing directly to main.
+# Uses the same core.hooksPath config as .githooks/pre-push — no extra setup needed.
+
+protected_branch='main'
+current_branch=$(git branch --show-current 2>/dev/null)
+
+if [[ "$current_branch" == "$protected_branch" ]]; then
+  echo "🚨"
+  echo "Are you sure you want to commit to '$protected_branch'?"
+  echo "🚨"
+
+  if ! read -r -p "Commit to $protected_branch anyway? [y/N] " reply < /dev/tty 2>/dev/null; then
+    echo "No interactive terminal available — refusing to commit to $protected_branch."
+    exit 1
+  fi
+
+  case "$reply" in
+    [yY][eE][sS]|[yY]) exit 0 ;;
+    *)
+      echo "Commit aborted."
+      exit 1
+      ;;
+  esac
+fi
+
+exit 0

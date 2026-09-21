@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": ".claude/hooks/block-main-push.sh"
+            "command": ".claude/hooks/guard-main.sh"
           }
         ]
       }
