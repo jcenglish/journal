@@ -9,6 +9,15 @@
             "command": ".claude/hooks/guard-main.sh"
           }
         ]
+      },
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/guard-schema.sh"
+          }
+        ]
       }
     ]
   }
