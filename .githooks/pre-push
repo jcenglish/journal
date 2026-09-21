@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+# Warns before a direct push to main. Enable once per clone with:
+#   git config core.hooksPath .githooks
+#   chmod +x .githooks/pre-push
+
+protected_branch='main'
+
+while read -r local_ref local_sha remote_ref remote_sha; do
+  if [[ "$remote_ref" == "refs/heads/$protected_branch" ]]; then
+    echo "🚨"
+    echo "You're about to push directly to '$protected_branch'."
+    echo "Did you mean to push to a feature/issue branch instead?"
+    echo "🚨"
+
+    if ! read -r -p "Push to $protected_branch anyway? [y/N] " reply < /dev/tty 2>/dev/null; then
+      echo "No interactive terminal available — refusing to push to $protected_branch."
+      exit 1
+    fi
+
+    case "$reply" in
+      [yY][eE][sS]|[yY]) exit 0 ;;
+      *)
+        echo "Push aborted."
+        exit 1
+        ;;
+    esac
+  fi
+done
+
+exit 0

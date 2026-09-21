@@ -127,6 +127,7 @@ Entry image uploads, journal cover images, Tag Manager view, full-text search, m
 - Don't add a new gem or npm package without flagging it first.
 - No encrypted field (`Entry.content`/`title`/`mood`/`health`, `Journal.title`, `Tag.content`) may reach Rails logs or error trackers. `config/initializers/filter_parameter_logging.rb` filters all of them today via bare keys (`:content`, `:title`, `:mood`, `:health`) alongside the credentials-shaped ones (`:passw`, `:email`, `:secret`, `:token`, etc.) — but bare keys match by name everywhere in params, not by model, so a future unrelated `title`/`content`-named field would get silently swept in too. Once Slice 1/4 fixes the actual request-body shape (whether params arrive wrapped as `entry.title` or flat), tighten these four to dotted, model-scoped filter keys (e.g. `"entry.title"` instead of `:title`) so filtering is precise rather than name-wide.
 - Don't commit `.env` files, Rails credentials, or other secrets — use `bin/rails credentials:edit` or the deploy env vars documented under Backend.
+- Never commit or push directly to main. Always work on a branch named after the issue (e.g. issue-4-entry-crud), and merge via PR.
 
 ## Backend (`backend/`)
 
