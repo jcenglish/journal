@@ -8,8 +8,7 @@ protected_branch='main'
 while read -r local_ref local_sha remote_ref remote_sha; do
   if [[ "$remote_ref" == "refs/heads/$protected_branch" ]]; then
     echo "🚨"
-    echo "You're about to push directly to '$protected_branch'."
-    echo "Did you mean to push to a feature/issue branch instead?"
+    echo "Do you want to push directly to '$protected_branch'?"
     echo "🚨"
 
     if ! read -r -p "Push to $protected_branch anyway? [y/N] " reply < /dev/tty 2>/dev/null; then
