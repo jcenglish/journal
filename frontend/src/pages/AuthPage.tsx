@@ -101,8 +101,6 @@ export function AuthPage() {
           </p>
         )}
 
-        {/* Deriving the key is ~600k PBKDF2 iterations — seconds on a low-end
-            phone — so the button has to say something while it runs. */}
         <button type="submit" className={styles.submit} disabled={pending}>
           {pending ? 'Deriving your key…' : mode === 'logIn' ? 'Log In' : 'Sign Up'}
         </button>
