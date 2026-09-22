@@ -158,7 +158,7 @@ Captured ideas, not commitments. Won't build all of these — keeping them writt
 
 ### Differentiators, fit the zero-knowledge direction
 
-- **Export/backup** — client-side decrypt-and-download of entries (JSON/Markdown). Also doubles as a partial mitigation for "lost my key."
+- **Export/backup** — client-side decrypt-and-download of entries (JSON/Markdown). Originally scoped as a partial mitigation for "lost my key." A second, distinct motivation surfaced later: AES-GCM's authentication tag means a tampered ciphertext blob fails to decrypt permanently — by design, there is no partial or degraded recovery, and there shouldn't be (bypassing the tag check would defeat the point of authenticated encryption). A backup taken before the tampering is the only recovery path for that specific entry. Two independent reasons now point at the same feature.
 - **App-level lock** — PIN/biometric on top of login, auto-lock after inactivity.
 - **Multiple journals per user** — schema (Journal as its own table) already supports this; mainly a UI addition.
 - **Mood/health trend charts** — now that mood/health are encrypted, this is a client-side rolling-average calc over already-decrypted entries rather than a server-side SQL aggregate (same "detection is free, already decrypted" reasoning as the AI mood trend idea below).
