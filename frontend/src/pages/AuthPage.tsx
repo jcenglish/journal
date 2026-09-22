@@ -107,7 +107,7 @@ export function AuthPage() {
       </form>
 
       <p className={styles.warning}>
-        ⚠ We can't reset a lost password — it's the key to your encrypted entries.
+        ⚠ Lost passwords cannot be reset because the password is the key to your encrypted entries.
       </p>
     </main>
   )
