@@ -48,9 +48,6 @@ export function AuthPage() {
       </header>
 
       <form className={styles.form} onSubmit={handleSubmit}>
-        {/* A segmented control is a mutually exclusive choice, so it's a radio
-            group: real inputs give arrow-key navigation for free, and keep the
-            mode toggle from sharing an accessible name with the submit button. */}
         <fieldset className={styles.modes}>
           <legend className={styles.legend}>Log in or sign up</legend>
           {(['logIn', 'signUp'] as const).map((value) => (
