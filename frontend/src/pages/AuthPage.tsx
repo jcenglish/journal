@@ -26,7 +26,7 @@ export function AuthPage() {
     setError(null)
 
     if (mode === 'signUp' && password.length < MINIMUM_PASSWORD_LENGTH) {
-      setError(`Please use at least ${MINIMUM_PASSWORD_LENGTH} characters — there's no way to reset it.`)
+      setError(`Please use at least ${MINIMUM_PASSWORD_LENGTH} characters.`)
       return
     }
 
