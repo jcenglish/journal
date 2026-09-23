@@ -6,6 +6,7 @@ Rails.application.routes.draw do
     post "signup", to: "registrations#create"
     resource :session, only: %i[create destroy]
     get "me", to: "users#show"
+    resources :journals, only: %i[index create]
   end
 
   # Reveal health status on /up that returns 200 if the app boots with no exceptions, otherwise 500.

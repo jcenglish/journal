@@ -13,6 +13,14 @@ export interface AuthenticatedUser {
   encrypted_data_key: string
 }
 
+// title is ciphertext — an envelope string, not the readable title. The server
+// only ever stores and returns it opaque.
+export interface JournalRecord {
+  id: number
+  title: string
+  created_at: string
+}
+
 export class ApiError extends Error {
   readonly status: number
   readonly body: unknown
@@ -86,4 +94,12 @@ export function logOut(): Promise<null> {
 
 export function me(): Promise<{ id: number; email: string }> {
   return request('GET', '/api/me')
+}
+
+export function listJournals(): Promise<JournalRecord[]> {
+  return request('GET', '/api/journals')
+}
+
+export function createJournal(encryptedTitle: string): Promise<JournalRecord> {
+  return request('POST', '/api/journals', { journal: { title: encryptedTitle } })
 }
