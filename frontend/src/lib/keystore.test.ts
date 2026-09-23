@@ -35,8 +35,6 @@ describe('keystore', () => {
     expect(await decrypt(await encrypt('a private thought'))).toBe('a private thought')
   })
 
-  // The ticket's fourth test case, at the unit level: after logout the key is
-  // gone from memory and a decrypt attempt fails without re-login.
   it('cannot decrypt after the key is cleared', async () => {
     await unlock()
     const envelope = await encrypt('a private thought')

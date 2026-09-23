@@ -30,8 +30,6 @@ describe('deriveCredentials', () => {
     expect(a.authHash).toBe(b.authHash)
   })
 
-  // The silent-data-loss guard: the server normalizes the email, so if the client
-  // didn't, these two would authenticate identically but derive different keys.
   it('normalizes the email before salting', async () => {
     const padded = await derive('  One@Example.COM  ', 'correct horse battery')
     const plain = await derive('one@example.com', 'correct horse battery')
@@ -73,14 +71,14 @@ describe('deriveCredentials', () => {
   // Without this, an `iterations` option that was silently ignored would still
   // pass every other test in this file.
   it('actually applies the iteration count', async () => {
-    const cheap = await deriveCredentials('one@example.com', 'correct horse battery', {
+    const fast = await deriveCredentials('one@example.com', 'correct horse battery', {
       iterations: 1_000,
     })
-    const dearer = await deriveCredentials('one@example.com', 'correct horse battery', {
+    const slow = await deriveCredentials('one@example.com', 'correct horse battery', {
       iterations: 2_000,
     })
 
-    expect(cheap.authHash).not.toBe(dearer.authHash)
+    expect(fast.authHash).not.toBe(slow.authHash)
   })
 
   it('produces a non-extractable wrapping key', async () => {
@@ -115,9 +113,9 @@ describe('data key wrapping', () => {
   })
 
   it('refuses to unwrap with a key derived from the wrong password', async () => {
-    const right = await derive('one@example.com', 'correct horse battery')
+    const correct = await derive('one@example.com', 'correct horse battery')
     const wrong = await derive('one@example.com', 'wrong horse battery')
-    const { blob } = await generateWrappedDataKey(right.wrapKey)
+    const { blob } = await generateWrappedDataKey(correct.wrapKey)
 
     await expect(unwrapDataKey(blob, wrong.wrapKey)).rejects.toThrow(DecryptionError)
   })
@@ -184,8 +182,6 @@ describe('encryptWithKey / decryptWithKey', () => {
     await expect(decryptWithKey(future, k)).rejects.toThrow(/Unsupported envelope version/)
   })
 
-  // Proves the version byte is authenticated rather than merely present: the
-  // same ciphertext won't open without it as associated data.
   it('binds the envelope version into the AEAD', async () => {
     const k = await key()
     const packed = Uint8Array.from(atob(await encryptWithKey('hello', k)), (c) => c.charCodeAt(0))
