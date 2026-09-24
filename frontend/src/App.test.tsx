@@ -18,8 +18,30 @@ function authValue(overrides: Partial<AuthContextValue> = {}): AuthContextValue 
 afterEach(() => vi.unstubAllGlobals())
 
 describe('App', () => {
-  it('does not leave a stale Create Journal view behind once a different user is signed in', async () => {
+  it('navigates from Home to Create Journal and back with the browser back button', async () => {
     stubEmptyJournalsFetch()
+    window.history.pushState({}, '', '/')
+    const user = userEvent.setup()
+
+    render(
+      <AuthContext.Provider value={authValue({ user: { id: 1, email: 'one@example.com' } })}>
+        <App />
+      </AuthContext.Provider>,
+    )
+
+    await user.click(await screen.findByRole('button', { name: 'New journal' }))
+    expect(screen.getByRole('heading', { name: 'New Journal' })).toBeInTheDocument()
+    expect(window.location.pathname).toBe('/journals/new')
+
+    window.history.back()
+
+    expect(await screen.findByRole('heading', { name: 'Journals' })).toBeInTheDocument()
+    expect(window.location.pathname).toBe('/')
+  })
+
+  it('does not leave a stale Create Journal route behind once a different user is signed in', async () => {
+    stubEmptyJournalsFetch()
+    window.history.pushState({}, '', '/')
     const user = userEvent.setup()
 
     const { rerender } = render(
@@ -49,5 +71,34 @@ describe('App', () => {
 
     expect(await screen.findByRole('heading', { name: 'Journals' })).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'New Journal' })).not.toBeInTheDocument()
+    expect(window.location.pathname).toBe('/')
+  })
+
+  it('redirects an unimplemented deep route (journal detail) to home instead of throwing', async () => {
+    stubEmptyJournalsFetch()
+    window.history.pushState({}, '', '/journals/3')
+
+    render(
+      <AuthContext.Provider value={authValue({ user: { id: 1, email: 'one@example.com' } })}>
+        <App />
+      </AuthContext.Provider>,
+    )
+
+    expect(await screen.findByRole('heading', { name: 'Journals' })).toBeInTheDocument()
+    expect(window.location.pathname).toBe('/')
+  })
+
+  it('does not redirect a deep link to an implemented route on initial load', async () => {
+    stubEmptyJournalsFetch()
+    window.history.pushState({}, '', '/journals/new')
+
+    render(
+      <AuthContext.Provider value={authValue({ user: { id: 1, email: 'one@example.com' } })}>
+        <App />
+      </AuthContext.Provider>,
+    )
+
+    expect(await screen.findByRole('heading', { name: 'New Journal' })).toBeInTheDocument()
+    expect(window.location.pathname).toBe('/journals/new')
   })
 })
