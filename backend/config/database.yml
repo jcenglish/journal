@@ -28,6 +28,10 @@ local_connection: &local_connection
   port: <%= ENV.fetch("BACKEND_DATABASE_PORT", 5432) %>
   username: <%= ENV.fetch("BACKEND_DATABASE_USERNAME", "backend") %>
   password: <%= ENV.fetch("BACKEND_DATABASE_PASSWORD", "backend") %>
+  # libpq otherwise tries GSSAPI encryption on every connect, and macOS's
+  # Kerberos framework segfaults in forked processes — which is exactly what
+  # parallel test workers are. The Docker Postgres never offers GSS anyway.
+  gssencmode: disable
 
 development:
   <<: [*default, *local_connection]
