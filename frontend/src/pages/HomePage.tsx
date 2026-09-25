@@ -5,10 +5,11 @@ interface HomePageProps {
   journals: Journal[] | null
   error: string | null
   onNewJournal: () => void
+  onOpenJournal: (journalId: number) => void
   onLogOut: () => void
 }
 
-export function HomePage({ journals, error, onNewJournal, onLogOut }: HomePageProps) {
+export function HomePage({ journals, error, onNewJournal, onOpenJournal, onLogOut }: HomePageProps) {
   return (
     <main className={styles.page}>
       <header className={styles.header}>
@@ -31,8 +32,10 @@ export function HomePage({ journals, error, onNewJournal, onLogOut }: HomePagePr
       {journals && journals.length > 0 && (
         <ul className={styles.list}>
           {journals.map((journal) => (
-            <li key={journal.id} className={styles.item}>
-              <span className={styles.itemTitle}>{journal.title}</span>
+            <li key={journal.id}>
+              <button type="button" className={styles.item} onClick={() => onOpenJournal(journal.id)}>
+                <span className={styles.itemTitle}>{journal.title}</span>
+              </button>
             </li>
           ))}
         </ul>

@@ -1,0 +1,57 @@
+.fieldset {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.legend {
+  padding: 0;
+  margin-bottom: var(--space-2);
+  font-size: 14px;
+  color: var(--color-text-muted);
+}
+
+.options {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.option {
+  position: relative;
+  cursor: pointer;
+}
+
+/* Visually hidden but still focusable and announced as a radio. */
+.input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  opacity: 0;
+}
+
+.circle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  font-size: 14px;
+  color: var(--color-text-muted);
+  border: 1px solid var(--color-border);
+  border-radius: 50%;
+}
+
+.input:checked + .circle {
+  color: var(--color-bg);
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+}
+
+.input:focus-visible + .circle {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}

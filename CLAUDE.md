@@ -38,7 +38,7 @@ This app uses **zero-knowledge, client-side encryption** for `Entry.content`, `E
 - TypeScript for all frontend code.
 - CSS Modules for styling — no Tailwind, no styled-components, no CSS-in-JS.
 - Mobile-first. No breadcrumb navigation (use a back chevron + screen title in the header instead) and no desktop-style left/right split panels (collapse secondary content like search/tags into a filter drawer or bottom sheet instead).
-- Entry content editor is **TipTap**, via its official open-source Simple Editor template (`npx @tiptap/cli add simple-editor`) — not BlockNote. The app only needs text + images, not BlockNote's Notion-style block model (drag handles, slash menu, nested blocks). Content still serializes to a ProseMirror JSON doc — account for that shape (not plain text) when it passes through client-side encryption, and later if blind-index tokenization is built.
+- Entry content editor is **TipTap** (`@tiptap/react` + `@tiptap/starter-kit`) with a hand-written toolbar in `src/components/ContentEditor.tsx` — not BlockNote, and not the Simple Editor CLI template (it vendors ~160 files of global SCSS; see `design-decisions.md`). Add features as TipTap extension packages plus a toolbar button. Content serializes to a ProseMirror JSON doc — account for that shape (not plain text) when it passes through client-side encryption, and later if blind-index tokenization is built.
 
 ## Mockups
 
@@ -93,7 +93,7 @@ Define these once as CSS custom properties and reference them from every compone
 Every slice must be verifiable, not just "looks done" — this is how Claude closes its own loop instead of relying on you to catch mistakes.
 
 - **Backend**: write or update Minitest tests for new models/controllers, including at least one request spec per resource asserting cross-user access is denied (see Security above). Run `bin/ci`; it must pass before the slice is complete.
-- **Frontend**: Vitest + React Testing Library are set up (slice 2). Write tests for new components and run `npm run test`, plus `npm run build` and `npm run lint`, before the slice is complete. Vitest runs with `globals: false`, so test files import `describe`/`it`/`expect`/`vi` from `vitest` explicitly; `src/test/setup.ts` registers Testing Library's cleanup and polyfills Web Crypto, which jsdom doesn't implement.
+- **Frontend**: Vitest + React Testing Library are set up (slice 2). Write tests for new components and run `npm run test`, plus `npm run build` and `npm run lint`, before the slice is complete. Vitest runs with `globals: false`, so test files import `describe`/`it`/`expect`/`vi` from `vitest` explicitly; `src/test/setup.ts` registers Testing Library's cleanup and polyfills Web Crypto plus the layout-geometry APIs TipTap/ProseMirror call, neither of which jsdom implements.
 - **Show the evidence**: paste the actual test output or command result confirming a pass, don't just assert "tests pass."
 - Run `/code-review` on the diff after tests pass, before opening the PR.
 
@@ -127,7 +127,7 @@ Entry image uploads, journal cover images, Tag Manager view, full-text search, m
 
 - Never hand-edit `db/schema.rb` — always generate and run a migration.
 - Don't add a new gem or npm package without flagging it first.
-- No encrypted field (`Entry.content`/`title`/`mood`/`health`, `Journal.title`, `Tag.content`) may reach Rails logs or error trackers. `config/initializers/filter_parameter_logging.rb` filters all of them today via bare keys (`:content`, `:title`, `:mood`, `:health`) alongside the credentials-shaped ones (`:passw`, `:email`, `:secret`, `:token`, etc.) — but bare keys match by name everywhere in params, not by model, so a future unrelated `title`/`content`-named field would get silently swept in too. Once Slice 1/4 fixes the actual request-body shape (whether params arrive wrapped as `entry.title` or flat), tighten these four to dotted, model-scoped filter keys (e.g. `"entry.title"` instead of `:title`) so filtering is precise rather than name-wide.
+- No encrypted field (`Entry.content`/`title`/`mood`/`health`, `Journal.title`, `Tag.content`) may reach Rails logs or error trackers. `config/initializers/filter_parameter_logging.rb` filters request params with dotted, model-scoped keys (`"entry.title"`, `"journal.title"`, `"tag.content"`, …) alongside the credentials-shaped ones (`:passw`, `:email`, `:secret`, `:token`, etc.), and separately keeps the bare column names in `ActiveRecord::Base.filter_attributes` for SQL logs and `#inspect`. A new encrypted field needs an entry in both lists.
 - Don't commit `.env` files, Rails credentials, or other secrets — use `bin/rails credentials:edit` or the deploy env vars documented under Backend.
 - Never commit or push directly to main. Always work on a branch named after the issue (e.g. issue-4-entry-crud), and merge via PR.
 

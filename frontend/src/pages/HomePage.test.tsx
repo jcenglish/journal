@@ -5,7 +5,7 @@ import { HomePage } from './HomePage'
 
 describe('HomePage', () => {
   it('renders the empty state when there are no journals', () => {
-    render(<HomePage journals={[]} error={null} onNewJournal={vi.fn()} onLogOut={vi.fn()} />)
+    render(<HomePage journals={[]} error={null} onNewJournal={vi.fn()} onOpenJournal={vi.fn()} onLogOut={vi.fn()} />)
 
     expect(screen.getByText('No journals yet — tap + to create your first one.')).toBeInTheDocument()
   })
@@ -18,7 +18,7 @@ describe('HomePage', () => {
           { id: 2, title: 'Gratitude Log', createdAt: '2026-01-02T00:00:00.000Z' },
         ]}
         error={null}
-        onNewJournal={vi.fn()}
+        onNewJournal={vi.fn()} onOpenJournal={vi.fn()}
         onLogOut={vi.fn()}
       />,
     )
@@ -29,14 +29,14 @@ describe('HomePage', () => {
   })
 
   it('shows nothing list-related while the initial fetch is in flight', () => {
-    render(<HomePage journals={null} error={null} onNewJournal={vi.fn()} onLogOut={vi.fn()} />)
+    render(<HomePage journals={null} error={null} onNewJournal={vi.fn()} onOpenJournal={vi.fn()} onLogOut={vi.fn()} />)
 
     expect(screen.queryByText('No journals yet — tap + to create your first one.')).not.toBeInTheDocument()
     expect(screen.queryByRole('list')).not.toBeInTheDocument()
   })
 
   it('surfaces a load error', () => {
-    render(<HomePage journals={null} error="Unable to load journals." onNewJournal={vi.fn()} onLogOut={vi.fn()} />)
+    render(<HomePage journals={null} error="Unable to load journals." onNewJournal={vi.fn()} onOpenJournal={vi.fn()} onLogOut={vi.fn()} />)
 
     expect(screen.getByRole('alert')).toHaveTextContent('Unable to load journals.')
   })
@@ -44,7 +44,7 @@ describe('HomePage', () => {
   it('calls onNewJournal when the add button is tapped', async () => {
     const user = userEvent.setup()
     const onNewJournal = vi.fn()
-    render(<HomePage journals={[]} error={null} onNewJournal={onNewJournal} onLogOut={vi.fn()} />)
+    render(<HomePage journals={[]} error={null} onNewJournal={onNewJournal} onOpenJournal={vi.fn()} onLogOut={vi.fn()} />)
 
     await user.click(screen.getByRole('button', { name: 'New journal' }))
 
@@ -54,10 +54,28 @@ describe('HomePage', () => {
   it('calls onLogOut when the log out button is tapped', async () => {
     const user = userEvent.setup()
     const onLogOut = vi.fn()
-    render(<HomePage journals={[]} error={null} onNewJournal={vi.fn()} onLogOut={onLogOut} />)
+    render(<HomePage journals={[]} error={null} onNewJournal={vi.fn()} onOpenJournal={vi.fn()} onLogOut={onLogOut} />)
 
     await user.click(screen.getByRole('button', { name: 'Log out' }))
 
     expect(onLogOut).toHaveBeenCalled()
+  })
+
+  it('calls onOpenJournal with the journal id when a row is tapped', async () => {
+    const user = userEvent.setup()
+    const onOpenJournal = vi.fn()
+    render(
+      <HomePage
+        journals={[{ id: 7, title: 'Morning Pages', createdAt: '2026-01-01T00:00:00.000Z' }]}
+        error={null}
+        onNewJournal={vi.fn()}
+        onOpenJournal={onOpenJournal}
+        onLogOut={vi.fn()}
+      />,
+    )
+
+    await user.click(screen.getByRole('button', { name: 'Morning Pages' }))
+
+    expect(onOpenJournal).toHaveBeenCalledWith(7)
   })
 })
