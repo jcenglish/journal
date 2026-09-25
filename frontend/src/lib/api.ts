@@ -21,6 +21,37 @@ export interface JournalRecord {
   created_at: string
 }
 
+// title, content, mood, and health are all ciphertext envelopes. title is
+// nullable only because the column is; this client always sends an envelope,
+// even for a blank title, so the server can't tell which entries have one.
+export interface EntrySummaryRecord {
+  id: number
+  title: string | null
+  entry_date: string
+}
+
+export interface EntryPageRecord {
+  entries: EntrySummaryRecord[]
+  next_page: number | null
+}
+
+export interface EntryRecord extends EntrySummaryRecord {
+  journal_id: number
+  content: string
+  mood: string
+  health: string
+  created_at: string
+  updated_at: string
+}
+
+export interface EncryptedEntryFields {
+  title: string
+  content: string
+  mood: string
+  health: string
+  entry_date: string
+}
+
 export class ApiError extends Error {
   readonly status: number
   readonly body: unknown
@@ -102,4 +133,24 @@ export function listJournals(): Promise<JournalRecord[]> {
 
 export function createJournal(encryptedTitle: string): Promise<JournalRecord> {
   return request('POST', '/api/journals', { journal: { title: encryptedTitle } })
+}
+
+export function listEntries(journalId: number, page = 1): Promise<EntryPageRecord> {
+  return request('GET', `/api/journals/${journalId}/entries?page=${page}`)
+}
+
+export function getEntry(journalId: number, entryId: number): Promise<EntryRecord> {
+  return request('GET', `/api/journals/${journalId}/entries/${entryId}`)
+}
+
+export function createEntry(journalId: number, fields: EncryptedEntryFields): Promise<EntryRecord> {
+  return request('POST', `/api/journals/${journalId}/entries`, { entry: fields })
+}
+
+export function updateEntry(
+  journalId: number,
+  entryId: number,
+  fields: EncryptedEntryFields,
+): Promise<EntryRecord> {
+  return request('PATCH', `/api/journals/${journalId}/entries/${entryId}`, { entry: fields })
 }

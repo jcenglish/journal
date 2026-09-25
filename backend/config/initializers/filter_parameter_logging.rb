@@ -5,10 +5,15 @@
 # See the ActiveSupport::ParameterFilter documentation for supported notations and behaviors.
 Rails.application.config.filter_parameters += [
   :passw, :email, :secret, :token, :_key, :crypt, :salt, :certificate, :otp, :ssn, :cvv, :cvc,
-  # Entry.content, Entry.title, Entry.mood, Entry.health, Journal.title, and Tag.content are all
-  # zero-knowledge, client-side encrypted — the server must never log ciphertext-adjacent request
-  # data for any of them. (The filter matches by param key regardless of model, so this also
-  # catches e.g. Tag#content and Journal#title — intentional, not collateral, since both are
-  # encrypted too now; see CLAUDE.md's Security & encryption section.)
-  :content, :title, :mood, :health
+  # The zero-knowledge, client-side encrypted fields (see CLAUDE.md's Security & encryption).
+  # Dotted keys match the full nested path of the request body (bodies are always explicitly
+  # nested — see ApplicationController), so an unrelated future `title` param isn't swept in.
+  "entry.content", "entry.title", "entry.mood", "entry.health", "journal.title", "tag.content"
 ]
+
+# Active Record builds its SQL-log bind filter and #inspect filter from the list above, but
+# matches only bare column names — a dotted key never matches there. Without these, entry
+# ciphertext would appear in SQL logs.
+ActiveSupport.on_load(:active_record) do
+  self.filter_attributes += %i[content title mood health]
+end

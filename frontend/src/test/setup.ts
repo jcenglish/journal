@@ -19,3 +19,13 @@ if (!globalThis.crypto?.subtle) {
     writable: true,
   })
 }
+
+// jsdom has no layout engine, so it omits the geometry APIs ProseMirror (under
+// TipTap) calls when it scrolls a selection into view. Empty geometry is
+// enough for typing and commands; it just can't measure anything.
+const emptyRect = () => new DOMRect(0, 0, 0, 0)
+const emptyRectList = () => Object.assign([], { item: () => null }) as unknown as DOMRectList
+Range.prototype.getClientRects ??= emptyRectList
+Range.prototype.getBoundingClientRect ??= emptyRect
+Element.prototype.getClientRects ??= emptyRectList
+document.elementFromPoint ??= () => null

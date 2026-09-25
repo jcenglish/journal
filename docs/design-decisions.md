@@ -115,7 +115,7 @@ A running record of technical decisions, why they were made, and what was consid
 - **What it gives**: bold/italic/underline, lists, headings, text alignment, image upload, link editing, undo/redo — MIT licensed, React-native, unstyled enough to skin with CSS Modules.
 - **Still true from the original decision**: content still serializes to a JSON doc (ProseMirror format, same family as BlockNote's), so the same encryption and future blind-indexing considerations still apply — just a smaller document shape than BlockNote's block tree.
 - **Alternatives considered:** Keep BlockNote (rejected — more surface area than needed). Milkdown (markdown-text-first, an even closer conceptual match to Bear, but a less mature ecosystem for this use case).
-- **Status:** Decided
+- **Status:** Partly superseded — TipTap stands, the Simple Editor template doesn't; see 2026-09-24 entry below.
 
 ### 2026-09-10 — Entry.title is client-side encrypted too, not just content
 
@@ -189,6 +189,29 @@ A running record of technical decisions, why they were made, and what was consid
 - **Decision:** `wrap_parameters format: []` disables ParamsWrapper's implicit wrapping. Every request body nests explicitly: `{"user": {…}}`, `{"session": {…}}`, later `{"entry": {…}}`.
 - **Context:** Left on, ParamsWrapper would find no `Registration` model for `RegistrationsController`, fall through to nil, and wrap *all* params under a `registration` key anyway — leaving both flat and wrapped copies in `params` and in the logs.
 - **Why it matters beyond tidiness:** this is the precondition CLAUDE.md's guardrail names for tightening `filter_parameter_logging`'s bare `:title`/`:content`/`:mood`/`:health` keys into dotted, model-scoped ones (`"entry.title"`) in slice 4. A flat body shape would have made that guardrail unimplementable.
+- **Status:** Decided
+
+### 2026-09-24 — Entry editor: TipTap core with a hand-written toolbar, not the Simple Editor template
+
+- **Decision:** Use `@tiptap/react` + `@tiptap/pm` + `@tiptap/starter-kit` directly, with a small toolbar component (bold/italic/underline, heading, bullet/numbered lists, undo/redo) styled with a CSS Module and the shared custom properties. TipTap itself, and the ProseMirror JSON document it produces, are unchanged from the 2026-09-08 decision.
+- **Context:** Running `npx @tiptap/cli add simple-editor` (tried in a scratch copy during slice 4) doesn't install a package — it vendors 161 source files (~12k lines) into the repo, including 30 global `.scss` files with their own hardcoded colors, needs an `@/` path alias, and adds 21 dependencies (Radix, Floating UI, Base UI, `sass-embedded`, `lodash.throttle`, `react-hotkeys-hook`, `clsx`, `class-variance-authority`). That breaks the CSS Modules and "custom properties only, never raw hex" conventions, and re-running the CLI with `--overwrite` to pick up upstream fixes would clobber any local restyling. Its image-upload button is also a demo stub (`handleImageUpload` fakes progress and returns a placeholder URL) — real image upload needs client-side encryption, Active Storage, and a decrypting node view, which is its own deferred slice.
+- **Trade-off accepted:** No floating link editor, text alignment, highlight, or sub/superscript out of the box. Each is one TipTap extension package plus a toolbar button when wanted — a public-API addition, not a patch to TipTap.
+- **Alternatives considered:** Full template (rejected — footprint and convention conflicts above). Template trimmed of unused features (rejected — still needs SCSS and most of the Radix/Floating UI tree for the toolbar).
+- **Status:** Decided
+
+### 2026-09-24 — Log filtering: dotted request-param keys, bare column names for Active Record
+
+- **Decision:** `config.filter_parameters` names the encrypted fields as dotted, model-scoped keys (`"entry.title"`, `"journal.title"`, `"tag.content"`, …). Separately, `ActiveRecord::Base.filter_attributes` gets the bare column names `content`, `title`, `mood`, `health`.
+- **Context:** Active Record derives its SQL-log bind filter and `#inspect` filter from `filter_parameters`, but matches there only by bare attribute name — a dotted key never matches a column. Tightening the request filter alone would have dropped that protection.
+- **Related — query log tags off in development:** Rails 8.1's `query_log_tags_enabled = true` (the generator default in `development.rb`) sets `ActiveRecord.disable_prepared_statements`, which inlines every value into the logged SQL text. There are then no binds to filter, so `log/development.log` was recording ciphertext, emails, and bcrypt digests verbatim regardless of any filter list. Turned off in development; production logs at `info` (no SQL) and test keeps prepared statements, so neither was affected. If query log tags are ever wanted back, this leak comes back with them.
+- **Trade-off accepted:** The Active Record filter is still name-wide across models, so a future unrelated `title` column would also be filtered from SQL logs. Over-filtering a log line is harmless; that's the direction to err in.
+- **Status:** Decided
+
+### 2026-09-24 — Entries list: offset pagination, 20 per page, "Load more"
+
+- **Decision:** `GET /api/journals/:id/entries?page=N` returns `{ entries, next_page }`, ordered by `entry_date` desc then `id` desc, 20 per page. The list endpoint returns only `id`, `title`, `entry_date` — not content. The client shows a "Load more" button rather than numbered pages.
+- **Context:** The list only needs the date and (decrypted) title; shipping and decrypting every entry's full content to render a list would scale badly. `next_page` is computed by fetching one extra row, avoiding a COUNT query.
+- **Alternatives considered:** Keyset/cursor pagination on `(entry_date, id)` — more robust against rows shifting between page loads, but a single-user journal rarely has concurrent inserts, so offset is simpler for now.
 - **Status:** Decided
 
 ### 2026-09-10 — A page reload ends the session rather than offering an unlock screen

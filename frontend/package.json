@@ -15,6 +15,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@tiptap/pm": "^3.31.3",
+    "@tiptap/react": "^3.31.3",
+    "@tiptap/starter-kit": "^3.31.3",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "wouter": "^3.11.0"
