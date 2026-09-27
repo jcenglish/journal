@@ -41,6 +41,13 @@ jobs:
       - name: Run backend CI pipeline
         run: bin/ci
 
+      - name: Upload backend coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage
+          path: backend/coverage/
+
   frontend:
     runs-on: ubuntu-latest
     defaults:
@@ -61,5 +68,13 @@ jobs:
 
       - run: npm ci
       - run: npm run lint
-      - run: npm run test
+      - name: Run tests with coverage (thresholds enforced in vitest.config.ts)
+        run: npm run test -- --coverage
       - run: npm run build
+
+      - name: Upload frontend coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-coverage
+          path: frontend/coverage/
