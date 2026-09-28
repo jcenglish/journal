@@ -74,7 +74,7 @@ describe('encryptEntry', () => {
     },
   )
 
-  it.each([0, 6, 10, null])('rejects health %s before anything is encrypted', async (health) => {
+  it.each([0, 6, -1, 2.5, Number.NaN, null])('rejects health %s before anything is encrypted', async (health) => {
     const encrypt = vi.spyOn(crypto.subtle, 'encrypt')
 
     await expect(encryptEntry(draft({ health }))).rejects.toThrow('Please choose a health rating from 1 to 5.')

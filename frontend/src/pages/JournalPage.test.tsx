@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { deriveCredentials, encryptWithKey, generateWrappedDataKey } from '../lib/crypto'
 import { clearDataKey, setDataKey } from '../lib/keystore'
 import { JournalPage } from './JournalPage'
+import styles from './JournalPage.module.css'
 
 let dataKey: CryptoKey
 
@@ -57,6 +58,7 @@ describe('JournalPage', () => {
         entries: [
           { id: 1, title: await encryptWithKey('Feeling steady today', dataKey), entry_date: '2026-09-06' },
           { id: 2, title: await encryptWithKey('', dataKey), entry_date: '2026-09-05' },
+          { id: 3, title: await encryptWithKey('Untitled', dataKey), entry_date: '2026-09-04' },
         ],
         next_page: null,
       },
@@ -64,9 +66,16 @@ describe('JournalPage', () => {
     renderPage()
 
     expect(await screen.findByText('Feeling steady today')).toBeInTheDocument()
-    expect(screen.getByText('Untitled')).toBeInTheDocument()
     expect(screen.queryByText('No entries yet.')).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Load more' })).not.toBeInTheDocument()
+
+    // Two spans can render the same text ("Untitled") for different reasons —
+    // one is the blank-title placeholder, the other is a real title that
+    // happens to read "Untitled" — so distinguish them by class, not text.
+    const untitledSpans = screen.getAllByText('Untitled')
+    expect(untitledSpans).toHaveLength(2)
+    expect(untitledSpans.filter((span) => span.className === styles.itemUntitled)).toHaveLength(1)
+    expect(untitledSpans.filter((span) => span.className === styles.itemTitle)).toHaveLength(1)
   })
 
   it('keeps the rest of the list usable when one title will not decrypt', async () => {

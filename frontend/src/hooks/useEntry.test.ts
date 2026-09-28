@@ -87,6 +87,10 @@ describe('useEntry', () => {
     const { entry } = JSON.parse(body)
     expect(entry.mood).not.toBe('5')
     expect(entry.health).not.toBe('3')
+    for (const field of [entry.title, entry.content, entry.mood, entry.health]) {
+      expect(field).toMatch(/^[A-Za-z0-9+/]+=*$/)
+      expect(field.length).toBeGreaterThan(20)
+    }
   })
 
   it('updates an existing entry with PATCH', async () => {
