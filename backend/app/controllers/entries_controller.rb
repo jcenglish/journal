@@ -41,10 +41,18 @@ class EntriesController < ApplicationController
 
   def update
     entry = @journal.entries.find(params[:id])
-    entry.assign_attributes(entry_params.except(:tag_ids))
-    entry.tags = tags_for(entry_params[:tag_ids])
 
-    if entry.save
+    # entry.tags= on an already-persisted entry writes tag_entries rows
+    # immediately, independent of entry.save — wrapped in a transaction and
+    # rolled back on a failed save so a 422 response never leaves tag changes
+    # committed behind it.
+    ActiveRecord::Base.transaction do
+      entry.assign_attributes(entry_params.except(:tag_ids))
+      entry.tags = tags_for(entry_params[:tag_ids]) if entry_params.key?(:tag_ids)
+      raise ActiveRecord::Rollback unless entry.save
+    end
+
+    if entry.errors.empty?
       render json: entry_json(entry)
     else
       render json: { errors: entry.errors.full_messages }, status: :unprocessable_content

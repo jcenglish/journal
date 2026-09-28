@@ -229,4 +229,24 @@ class EntriesTest < ActionDispatch::IntegrationTest
     entry = Entry.find(response.parsed_body["id"])
     assert_equal [], entry.tag_ids
   end
+
+  test "a failed update leaves tags untouched, not just the entry's other fields" do
+    sign_in_as users(:one)
+    entries(:one).tags = [ tags(:one) ]
+
+    patch journal_entry_path(journals(:one), entries(:one)), params: entry_body(content: "", tag_ids: []), as: :json
+
+    assert_response :unprocessable_content
+    assert_equal [ tags(:one).id ], entries(:one).reload.tag_ids
+  end
+
+  test "omitting tag_ids from an update leaves existing tags alone" do
+    sign_in_as users(:one)
+    entries(:one).tags = [ tags(:one) ]
+
+    patch journal_entry_path(journals(:one), entries(:one)), params: entry_body, as: :json
+
+    assert_response :success
+    assert_equal [ tags(:one).id ], entries(:one).reload.tag_ids
+  end
 end
