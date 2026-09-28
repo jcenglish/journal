@@ -1,11 +1,12 @@
-ENV["RAILS_ENV"] ||= "test"
-require_relative "../config/environment"
-require "rails/test_help"
 require "simplecov"
 
 SimpleCov.start "rails" do
   minimum_coverage 90 # start at your current number, then ratchet up
 end
+
+ENV["RAILS_ENV"] ||= "test"
+require_relative "../config/environment"
+require "rails/test_help"
 
 module ActiveSupport
   class TestCase
