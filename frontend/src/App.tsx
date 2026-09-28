@@ -4,12 +4,16 @@ import { useAuth } from './hooks/useAuth'
 import { useJournals } from './hooks/useJournals'
 import { AuthPage } from './pages/AuthPage'
 import { CreateJournalPage } from './pages/CreateJournalPage'
+import { EntryEditorPage } from './pages/EntryEditorPage'
 import { HomePage } from './pages/HomePage'
+import { JournalPage } from './pages/JournalPage'
 
 // Distinguishes "no identity observed yet" (initial mount — a deep link
 // while already logged in must not bounce to home) from "previously logged
 // out" (id `null`), which is a real identity change worth resetting for.
 const UNSET = Symbol('unset')
+
+const CHILD_ENTRY = { openedFromParent: true }
 
 function App() {
   const { user, logOut } = useAuth()
@@ -34,31 +38,75 @@ function App() {
 
   if (!user) return <AuthPage />
 
+  // A screen opened from its parent marks its history entry, so going "up"
+  // from it pops back to the parent instead of stacking another copy. A deep
+  // link has no such mark, so it replaces itself with the parent instead.
+  const openChild = (to: string) => navigate(to, { state: CHILD_ENTRY })
+  const goUp = (parent: string) => {
+    if ((window.history.state as typeof CHILD_ENTRY | null)?.openedFromParent) window.history.back()
+    else navigate(parent, { replace: true })
+  }
+
+  // undefined while journals are still loading (or failed — Home shows why);
+  // null once loaded if the id isn't one of this user's journals.
+  function findJournal(journalId: string) {
+    if (journals === null) return error ? null : undefined
+    return journals.find((journal) => journal.id === Number(journalId)) ?? null
+  }
+
   return (
     <Switch>
       <Route path="/">
         <HomePage
           journals={journals}
           error={error}
-          onNewJournal={() => navigate('/journals/new')}
+          onNewJournal={() => openChild('/journals/new')}
+          onOpenJournal={(journalId) => openChild(`/journals/${journalId}`)}
           onLogOut={() => void logOut()}
         />
       </Route>
       <Route path="/journals/new">
         <CreateJournalPage
-          onBack={() => navigate('/', { replace: true })}
+          onBack={() => goUp('/')}
           onCreate={async (title) => {
             await create(title)
-            navigate('/', { replace: true })
+            goUp('/')
           }}
         />
       </Route>
-      {/* Route shape reserved for the Entry CRUD slice; not implemented yet. */}
       <Route path="/journals/:journalId/entries/:entryId">
-        <Redirect to="/" replace />
+        {({ journalId, entryId }) => {
+          const journal = findJournal(journalId)
+          if (journal === undefined) return null
+          const id = entryId === 'new' ? null : /^\d+$/.test(entryId) ? Number(entryId) : Number.NaN
+          if (!journal || Number.isNaN(id)) return <Redirect to="/" replace />
+          const journalPath = `/journals/${journal.id}`
+          return (
+            <EntryEditorPage
+              key={`${journal.id}/${entryId}`}
+              journalId={journal.id}
+              entryId={id}
+              onBack={() => goUp(journalPath)}
+              onSaved={() => goUp(journalPath)}
+            />
+          )
+        }}
       </Route>
       <Route path="/journals/:journalId">
-        <Redirect to="/" replace />
+        {({ journalId }) => {
+          const journal = findJournal(journalId)
+          if (journal === undefined) return null
+          if (!journal) return <Redirect to="/" replace />
+          return (
+            <JournalPage
+              key={journal.id}
+              journal={journal}
+              onBack={() => goUp('/')}
+              onNewEntry={() => openChild(`/journals/${journal.id}/entries/new`)}
+              onOpenEntry={(entryId) => openChild(`/journals/${journal.id}/entries/${entryId}`)}
+            />
+          )
+        }}
       </Route>
       <Route>
         <Redirect to="/" replace />

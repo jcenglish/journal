@@ -47,8 +47,11 @@ Rails.application.configure do
   # Highlight code that triggered database queries in logs.
   config.active_record.verbose_query_logs = true
 
-  # Append comments with runtime information tags to SQL queries in logs.
-  config.active_record.query_log_tags_enabled = true
+  # Off on purpose: enabling query log tags makes Rails disable prepared
+  # statements, which inlines every value into the logged SQL where
+  # filter_attributes can't reach it — logging encrypted fields, emails, and
+  # password digests. See CLAUDE.md's Guardrails.
+  config.active_record.query_log_tags_enabled = false
 
   # Highlight code that enqueued background job in logs.
   config.active_job.verbose_enqueue_logs = true
