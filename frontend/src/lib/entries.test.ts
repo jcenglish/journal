@@ -30,7 +30,7 @@ const content = {
 }
 
 function draft(overrides: Partial<EntryDraft> = {}): EntryDraft {
-  return { entryDate: '2026-09-05', title: 'Sep 5', content, mood: 2, health: 4, ...overrides }
+  return { entryDate: '2026-09-05', title: 'Sep 5', content, mood: 2, health: 4, tagIds: [], ...overrides }
 }
 
 function recordFrom(fields: Awaited<ReturnType<typeof encryptEntry>>) {
@@ -55,6 +55,13 @@ describe('encryptEntry', () => {
       expect(field.length).toBeGreaterThan(20)
     }
     expect(fields.entry_date).toBe('2026-09-05')
+    expect(fields.tag_ids).toEqual([])
+  })
+
+  it('passes tag_ids through unencrypted', async () => {
+    const fields = await encryptEntry(draft({ tagIds: [1, 2] }))
+
+    expect(fields.tag_ids).toEqual([1, 2])
   })
 
   it('encrypts a blank title too, so the server cannot tell which entries have one', async () => {
@@ -98,9 +105,17 @@ describe('encryptEntry', () => {
 
 describe('decryptEntry', () => {
   it('round-trips every field', async () => {
-    const entry = await decryptEntry(recordFrom(await encryptEntry(draft())))
+    const entry = await decryptEntry(recordFrom(await encryptEntry(draft({ tagIds: [4, 5] }))))
 
-    expect(entry).toEqual({ id: 9, title: 'Sep 5', content, mood: 2, health: 4, entryDate: '2026-09-05' })
+    expect(entry).toEqual({
+      id: 9,
+      title: 'Sep 5',
+      content,
+      mood: 2,
+      health: 4,
+      entryDate: '2026-09-05',
+      tagIds: [4, 5],
+    })
   })
 
   it('refuses a stored rating outside 1-5', async () => {

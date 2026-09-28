@@ -18,6 +18,7 @@ export interface Entry extends Omit<EntrySummary, 'unreadable'> {
   content: JSONContent
   mood: Rating
   health: Rating
+  tagIds: number[]
 }
 
 /** What the editor holds before validation — ratings may still be unset. */
@@ -27,6 +28,7 @@ export interface EntryDraft {
   content: JSONContent
   mood: number | null
   health: number | null
+  tagIds: number[]
 }
 
 export class InvalidEntryError extends Error {
@@ -81,7 +83,14 @@ export async function encryptEntry(draft: EntryDraft): Promise<api.EncryptedEntr
     encrypt(String(health)),
   ])
 
-  return { title, content, mood: encryptedMood, health: encryptedHealth, entry_date: draft.entryDate }
+  return {
+    title,
+    content,
+    mood: encryptedMood,
+    health: encryptedHealth,
+    entry_date: draft.entryDate,
+    tag_ids: draft.tagIds,
+  }
 }
 
 async function decryptTitle(title: string | null): Promise<string> {
@@ -120,7 +129,7 @@ export async function decryptEntry(record: api.EntryRecord): Promise<Entry> {
     throw new DecryptionError('Stored content is not a valid document')
   }
 
-  return { id: record.id, title, content, mood, health, entryDate: record.entry_date }
+  return { id: record.id, title, content, mood, health, entryDate: record.entry_date, tagIds: record.tag_ids }
 }
 
 /** entry_date is a calendar date; parsing it as a Date would shift it by the UTC offset. */
