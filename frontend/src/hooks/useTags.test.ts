@@ -101,4 +101,67 @@ describe('useTags', () => {
     await expect(result.current.create('   ', '#2563eb')).rejects.toThrow('Please enter a tag name.')
     expect(fetchMock).toHaveBeenCalledTimes(1) // only the initial list fetch
   })
+
+  describe('deduplication', () => {
+    const setup = async () => {
+      const dataKey = await unlock()
+      const envelope = await encryptWithKey('Work', dataKey)
+      const fetchMock = vi.fn(async (_path: string, init?: RequestInit) => {
+        if (init?.method === 'POST') {
+          const body = JSON.parse(String(init.body)) as { tag: { content: string; color: string } }
+          expect(body.tag.content).not.toBe('Travel')
+          return json({ id: 2, content: body.tag.content, color: body.tag.color, created_at: '2026-01-02T00:00:00.000Z' }, 201)
+        }
+        return json([{ id: 1, content: envelope, color: '#2563eb', created_at: '2026-01-01T00:00:00.000Z' }])
+      })
+      vi.stubGlobal('fetch', fetchMock)
+      const hook = renderHook(() => useTags())
+      await waitFor(() => expect(hook.result.current.tags).toHaveLength(1))
+      return { ...hook, fetchMock }
+    }
+
+    it('returns the existing tag without a create request for a trimmed, case-insensitive match', async () => {
+      const { result, fetchMock } = await setup()
+
+      let tag
+      await act(async () => {
+        tag = await result.current.create('  work ', '#ef4444')
+      })
+
+      expect(tag).toEqual({ id: 1, content: 'Work', color: '#2563eb' })
+      expect(fetchMock).toHaveBeenCalledTimes(1)
+      expect(result.current.tags).toHaveLength(1)
+    })
+
+    it('leaves the existing tag color unchanged', async () => {
+      const { result } = await setup()
+
+      let tag
+      await act(async () => {
+        tag = await result.current.create('WORK', '#ef4444')
+      })
+
+      expect(tag).toMatchObject({ id: 1, color: '#2563eb' })
+    })
+
+    it('rejects creation until the initial load has finished', async () => {
+      await unlock()
+      vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>(() => {})))
+      const { result } = renderHook(() => useTags())
+
+      await expect(result.current.create('Work', '#ef4444')).rejects.toThrow('Tags are still loading')
+    })
+
+    it('still creates a tag with a new name', async () => {
+      const { result, fetchMock } = await setup()
+
+      let tag
+      await act(async () => {
+        tag = await result.current.create('Travel', '#ef4444')
+      })
+
+      expect(tag).toEqual({ id: 2, content: 'Travel', color: '#ef4444' })
+      expect(fetchMock).toHaveBeenCalledTimes(2)
+    })
+  })
 })

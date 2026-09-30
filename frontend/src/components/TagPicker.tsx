@@ -33,7 +33,7 @@ export function TagPicker({ tags, selectedIds, onChange, onCreateTag, labelId }:
 
   async function handleCreate(content: string, color: string) {
     const tag = await onCreateTag(content, color)
-    onChange([...selectedIds, tag.id])
+    if (!selectedIds.includes(tag.id)) onChange([...selectedIds, tag.id])
     setModalOpen(false)
   }
 
