@@ -188,4 +188,65 @@ class EntriesTest < ActionDispatch::IntegrationTest
 
     assert_equal journals(:one), entries(:one).reload.journal
   end
+
+  test "attaches tags on create and returns their ids" do
+    sign_in_as users(:one)
+
+    post journal_entries_path(journals(:one)), params: entry_body(tag_ids: [ tags(:one).id ]), as: :json
+
+    assert_response :created
+    assert_equal [ tags(:one).id ], response.parsed_body["tag_ids"]
+  end
+
+  test "replaces tags on update, including clearing them" do
+    sign_in_as users(:one)
+    entries(:one).tags = [ tags(:one) ]
+
+    patch journal_entry_path(journals(:one), entries(:one)), params: entry_body(tag_ids: []), as: :json
+
+    assert_response :success
+    assert_equal [], entries(:one).reload.tag_ids
+  end
+
+  test "sending a duplicate tag id does not create a duplicate tagging" do
+    sign_in_as users(:one)
+
+    post journal_entries_path(journals(:one)),
+      params: entry_body(tag_ids: [ tags(:one).id, tags(:one).id ]), as: :json
+
+    assert_response :created
+    entry = Entry.find(response.parsed_body["id"])
+    assert_equal [ tags(:one).id ], entry.tag_ids
+  end
+
+  # IDOR: another user's tag id is silently dropped, not attached.
+  test "cannot attach another user's tag" do
+    sign_in_as users(:one)
+
+    post journal_entries_path(journals(:one)), params: entry_body(tag_ids: [ tags(:two).id ]), as: :json
+
+    assert_response :created
+    entry = Entry.find(response.parsed_body["id"])
+    assert_equal [], entry.tag_ids
+  end
+
+  test "a failed update leaves tags untouched, not just the entry's other fields" do
+    sign_in_as users(:one)
+    entries(:one).tags = [ tags(:one) ]
+
+    patch journal_entry_path(journals(:one), entries(:one)), params: entry_body(content: "", tag_ids: []), as: :json
+
+    assert_response :unprocessable_content
+    assert_equal [ tags(:one).id ], entries(:one).reload.tag_ids
+  end
+
+  test "omitting tag_ids from an update leaves existing tags alone" do
+    sign_in_as users(:one)
+    entries(:one).tags = [ tags(:one) ]
+
+    patch journal_entry_path(journals(:one), entries(:one)), params: entry_body, as: :json
+
+    assert_response :success
+    assert_equal [ tags(:one).id ], entries(:one).reload.tag_ids
+  end
 end

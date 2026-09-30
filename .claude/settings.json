@@ -1,4 +1,12 @@
 {
+  "permissions": {
+    "deny": [
+      "Read(**/.env*)",
+      "Read(**/*.key)",
+      "Read(**/docker-compose*.yml)",
+      "Read(**/config/database.yml)"
+    ]
+  },
   "hooks": {
     "PreToolUse": [
       {

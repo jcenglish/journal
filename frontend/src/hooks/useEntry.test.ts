@@ -24,7 +24,7 @@ const content = {
   content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Good energy, long walk' }] }],
 }
 
-const draft: EntryDraft = { entryDate: '2026-09-03', title: 'Sep 3', content, mood: 5, health: 3 }
+const draft: EntryDraft = { entryDate: '2026-09-03', title: 'Sep 3', content, mood: 5, health: 3, tagIds: [] }
 
 async function record(id: number, from: EntryDraft = draft) {
   return {
@@ -57,7 +57,15 @@ describe('useEntry', () => {
     expect(result.current.loading).toBe(true)
 
     await waitFor(() => expect(result.current.entry).not.toBeNull())
-    expect(result.current.entry).toEqual({ id: 9, title: 'Sep 3', content, mood: 5, health: 3, entryDate: '2026-09-03' })
+    expect(result.current.entry).toEqual({
+      id: 9,
+      title: 'Sep 3',
+      content,
+      mood: 5,
+      health: 3,
+      entryDate: '2026-09-03',
+      tagIds: [],
+    })
     expect(result.current.loading).toBe(false)
     expect(fetchMock).toHaveBeenCalledWith('/api/journals/3/entries/9', expect.anything())
   })

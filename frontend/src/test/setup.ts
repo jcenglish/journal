@@ -29,3 +29,13 @@ Range.prototype.getClientRects ??= emptyRectList
 Range.prototype.getBoundingClientRect ??= emptyRect
 Element.prototype.getClientRects ??= emptyRectList
 document.elementFromPoint ??= () => null
+
+// jsdom's <dialog> showModal()/close() are no-ops that never toggle the `open`
+// attribute, so a dialog-based modal never becomes queryable in tests without this.
+HTMLDialogElement.prototype.showModal = function (this: HTMLDialogElement) {
+  this.setAttribute('open', '')
+}
+HTMLDialogElement.prototype.close = function (this: HTMLDialogElement) {
+  this.removeAttribute('open')
+  this.dispatchEvent(new Event('close'))
+}

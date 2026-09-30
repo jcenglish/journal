@@ -2,7 +2,9 @@ import { useId, useState, type FormEvent } from 'react'
 import type { JSONContent } from '@tiptap/react'
 import { ContentEditor } from '../components/ContentEditor'
 import { RatingSelector } from '../components/RatingSelector'
+import { TagPicker } from '../components/TagPicker'
 import { useEntry } from '../hooks/useEntry'
+import { useTags } from '../hooks/useTags'
 import { emptyDoc, todayLocal, type Entry, type EntryDraft } from '../lib/entries'
 import styles from './EntryEditorPage.module.css'
 
@@ -52,8 +54,10 @@ function EntryForm({ entry, onSave, onSaved }: EntryFormProps) {
   const [content, setContent] = useState<JSONContent>(entry?.content ?? emptyDoc())
   const [mood, setMood] = useState<number | null>(entry?.mood ?? null)
   const [health, setHealth] = useState<number | null>(entry?.health ?? null)
+  const [tagIds, setTagIds] = useState<number[]>(entry?.tagIds ?? [])
   const [error, setError] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
+  const { tags, create: createTag } = useTags()
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault()
@@ -61,7 +65,7 @@ function EntryForm({ entry, onSave, onSaved }: EntryFormProps) {
     setPending(true)
 
     try {
-      await onSave({ entryDate, title, content, mood, health })
+      await onSave({ entryDate, title, content, mood, health, tagIds })
       onSaved()
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Something went wrong. Please try again.')
@@ -108,6 +112,14 @@ function EntryForm({ entry, onSave, onSaved }: EntryFormProps) {
 
       <RatingSelector legend="Mood" name={`${ids}-mood`} value={mood} onChange={setMood} />
       <RatingSelector legend="Health" name={`${ids}-health`} value={health} onChange={setHealth} />
+
+      <TagPicker
+        tags={tags}
+        selectedIds={tagIds}
+        onChange={setTagIds}
+        onCreateTag={createTag}
+        labelId={`${ids}-tags`}
+      />
 
       {error && (
         <p className={styles.error} role="alert">

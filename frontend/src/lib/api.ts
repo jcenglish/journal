@@ -40,6 +40,7 @@ export interface EntryRecord extends EntrySummaryRecord {
   content: string
   mood: string
   health: string
+  tag_ids: number[]
   created_at: string
   updated_at: string
 }
@@ -50,6 +51,15 @@ export interface EncryptedEntryFields {
   mood: string
   health: string
   entry_date: string
+  tag_ids: number[]
+}
+
+// content is a ciphertext envelope; color is plaintext (just a swatch).
+export interface TagRecord {
+  id: number
+  content: string
+  color: string
+  created_at: string
 }
 
 export class ApiError extends Error {
@@ -153,4 +163,12 @@ export function updateEntry(
   fields: EncryptedEntryFields,
 ): Promise<EntryRecord> {
   return request('PATCH', `/api/journals/${journalId}/entries/${entryId}`, { entry: fields })
+}
+
+export function listTags(): Promise<TagRecord[]> {
+  return request('GET', '/api/tags')
+}
+
+export function createTag(encryptedContent: string, color: string): Promise<TagRecord> {
+  return request('POST', '/api/tags', { tag: { content: encryptedContent, color } })
 }

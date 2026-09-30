@@ -136,8 +136,8 @@ A running record of technical decisions, why they were made, and what was consid
 ### 2026-09-10 — Auth: split-key derivation, so the server never sees the password
 
 - **Decision:** The password never leaves the browser. One PBKDF2-HMAC-SHA256 pass (600,000 iterations) turns it into a master key, which HKDF-SHA256 splits — using distinct `info` labels — into a wrapping key that stays in memory and a base64 `authHash` that is POSTed as the `password` param and bcrypt'd by `has_secure_password`. The server stores only `bcrypt(authHash)`.
-- **Context:** The password has two jobs: prove identity, and produce the AES key. Doing both with the same transmitted value satisfies the letter of "the key is never sent" while gutting the spirit of it — the server would receive the *seed* of the key, sitting in the params hash, in Puma's memory, in any APM trace or heap dump. Anyone holding it re-runs the same PBKDF2 and reads every entry. HKDF is one-way, so possession of `authHash` yields nothing about the wrapping key; recovering the password from it costs the same 600k-iteration brute force as attacking the digest directly. Precedent: Bitwarden and Standard Notes (v004) both ship this shape.
-- **Trade-off accepted:** Any server-side password strength validation becomes meaningless — the server only ever sees 44 characters. Minimum length is enforced client-side only (`AuthPage`), and deliberately *not* mirrored as a Rails validation that would be a lie passing 100% of the time.
+- **Context:** The password has two jobs: prove identity, and produce the AES key. Doing both with the same transmitted value satisfies the letter of "the key is never sent" while gutting the spirit of it — the server would receive the _seed_ of the key, sitting in the params hash, in Puma's memory, in any APM trace or heap dump. Anyone holding it re-runs the same PBKDF2 and reads every entry. HKDF is one-way, so possession of `authHash` yields nothing about the wrapping key; recovering the password from it costs the same 600k-iteration brute force as attacking the digest directly. Precedent: Bitwarden and Standard Notes (v004) both ship this shape.
+- **Trade-off accepted:** Any server-side password strength validation becomes meaningless — the server only ever sees 44 characters. Minimum length is enforced client-side only (`AuthPage`), and deliberately _not_ mirrored as a Rails validation that would be a lie passing 100% of the time.
 - **Stated boundary:** This does not defend against a hostile server shipping malicious JavaScript. Every web-delivered E2EE system shares that hole. What it does defend against: server-side logging, database compromise, a curious operator, an APM vendor, and a subpoena of data at rest.
 - **Alternatives considered:** POST the real password over TLS and derive the key separately from it (rejected — the server momentarily holds material that re-derives the key). Bitwarden's original 1-iteration-PBKDF2 auth hash (HKDF with domain-separated labels is cleaner).
 - **Status:** Decided
@@ -145,15 +145,15 @@ A running record of technical decisions, why they were made, and what was consid
 ### 2026-09-10 — KDF salt is the normalized email, not a random per-user column
 
 - **Decision:** `salt = "journal:v1:" + email.trim().toLowerCase()`. No salt column, no pre-login lookup.
-- **Context:** PBKDF2 has to run *before* authentication — the derived value **is** the credential — so the client needs the salt with no session to authorize a fetch. A random salt lives in the database and would need an unauthenticated `GET /api/salt?email=`, which answers "does an account exist here?" to anyone who asks. On a private journal, membership is itself sensitive. Salts need uniqueness, not secrecy or entropy, and the email is already the unique index on `users`. The `journal:v1:` prefix scopes it so no precomputation is reusable against another service.
+- **Context:** PBKDF2 has to run _before_ authentication — the derived value **is** the credential — so the client needs the salt with no session to authorize a fetch. A random salt lives in the database and would need an unauthenticated `GET /api/salt?email=`, which answers "does an account exist here?" to anyone who asks. On a private journal, membership is itself sensitive. Salts need uniqueness, not secrecy or entropy, and the email is already the unique index on `users`. The `journal:v1:` prefix scopes it so no precomputation is reusable against another service.
 - **Trade-off accepted:** The salt is predictable, so someone targeting a known person can precompute before ever breaching the database. Blunted by the 600k iteration count (each candidate password is expensive), the app-scoping prefix, and the fact that the work still helps against only that one target rather than being amortized across all users.
 - **Hard constraint this creates:** the client must normalize the email **identically** to `User.normalizes`. A mismatch authenticates fine but derives a different key — silent, unrecoverable data loss in an app with no reset. Pinned by a test in `crypto.test.ts`.
-- **Alternatives considered:** Random `key_derivation_salt` column plus a prelogin endpoint (rejected — enumeration oracle, and Bitwarden's own mitigation for it is to return a *deterministic fake* salt for unknown emails, which means building this scheme anyway as a fallback path).
+- **Alternatives considered:** Random `key_derivation_salt` column plus a prelogin endpoint (rejected — enumeration oracle, and Bitwarden's own mitigation for it is to return a _deterministic fake_ salt for unknown emails, which means building this scheme anyway as a fallback path).
 - **Status:** Decided
 
 ### 2026-09-10 — Signup still discloses account existence (known, bounded, not closed)
 
-- **Decision:** Login is carefully non-disclosing (identical body *and*, via `authenticate_by`, identical timing for an unknown email and a wrong password). Signup is not: a duplicate address returns `422 {"errors":["Email has already been taken"]}`. It is rate limited to 10 attempts per 3 minutes, and otherwise accepted as a known gap.
+- **Decision:** Login is carefully non-disclosing (identical body _and_, via `authenticate_by`, identical timing for an unknown email and a wrong password). Signup is not: a duplicate address returns `422 {"errors":["Email has already been taken"]}`. It is rate limited to 10 attempts per 3 minutes, and otherwise accepted as a known gap.
 - **Context:** Caught in review as an inconsistency — the salt decision above rejected a prelogin endpoint precisely to avoid an enumeration oracle, and signup hands over the same fact. Genuinely closing it means accepting every signup, disclosing nothing, and confirming out of band by email, which needs a mailer and an email-verification flow that MVP doesn't have. Rate limiting bounds how fast the oracle can be walked; it does not remove it.
 - **Trade-off accepted:** An attacker can still test whether a specific address has an account, at ~10 guesses per 3 minutes per IP. Bulk enumeration is impractical; targeted confirmation is not.
 - **Revisit when:** email verification exists, or if this app ever holds accounts where membership alone is the sensitive fact.
@@ -181,15 +181,22 @@ A running record of technical decisions, why they were made, and what was consid
 
 - **Decision:** `ActionController::API` has no `RequestForgeryProtection`, and it is not added back. Three independent controls instead: **SameSite=Lax** on the session cookie (suppresses it on cross-site subrequests and non-GET navigations — every write here is POST or DELETE); **no CORS allowance at all** (cross-origin JS can't read responses, and a JSON content type triggers a preflight that fails); and a **JSON-only body requirement** (a cross-site HTML form — the only way to make a cross-origin write without CORS — can only send urlencoded, multipart, or text/plain).
 - **Context:** A token means shipping it to the client via a readable cookie or a dedicated endpoint, for a defense that SameSite already provides given a same-origin deployment.
-- **Stated collapse condition:** *this posture rests on frontend and API sharing one origin in production.* A split-origin deploy forces `SameSite=None`, which voids control #1 and makes a double-submit CSRF token mandatory. Decide that before deploying, not after.
+- **Stated collapse condition:** _this posture rests on frontend and API sharing one origin in production._ A split-origin deploy forces `SameSite=None`, which voids control #1 and makes a double-submit CSRF token mandatory. Decide that before deploying, not after.
 - **Status:** Decided
 
 ### 2026-09-10 — Request bodies are explicitly nested under a resource key
 
 - **Decision:** `wrap_parameters format: []` disables ParamsWrapper's implicit wrapping. Every request body nests explicitly: `{"user": {…}}`, `{"session": {…}}`, later `{"entry": {…}}`.
-- **Context:** Left on, ParamsWrapper would find no `Registration` model for `RegistrationsController`, fall through to nil, and wrap *all* params under a `registration` key anyway — leaving both flat and wrapped copies in `params` and in the logs.
+- **Context:** Left on, ParamsWrapper would find no `Registration` model for `RegistrationsController`, fall through to nil, and wrap _all_ params under a `registration` key anyway — leaving both flat and wrapped copies in `params` and in the logs.
 - **Why it matters beyond tidiness:** this is the precondition CLAUDE.md's guardrail names for tightening `filter_parameter_logging`'s bare `:title`/`:content`/`:mood`/`:health` keys into dotted, model-scoped ones (`"entry.title"`) in slice 4. A flat body shape would have made that guardrail unimplementable.
 - **Status:** Decided
+
+### 2026-09-10 — A page reload ends the session rather than offering an unlock screen
+
+- **Decision:** The session cookie survives a reload but the in-memory key does not. On mount, if the keystore is empty, the client fires `DELETE /api/session` and shows the Auth screen. Two states, not three.
+- **Context:** The alternative — keep the session and prompt for the password to re-derive the key — is nicer UX but means every later slice has to handle an "authenticated but locked" state, and it really wants a server-side idle timeout to go with it.
+- **Trade-off accepted:** A refresh logs you out, which is mildly annoying in development. The unlock screen is a purely additive change later: same components, same endpoints.
+- **Status:** Decided (interim — expect to revisit alongside the app-level lock in the backlog)
 
 ### 2026-09-24 — Entry editor: TipTap core with a hand-written toolbar, not the Simple Editor template
 
@@ -214,12 +221,12 @@ A running record of technical decisions, why they were made, and what was consid
 - **Alternatives considered:** Keyset/cursor pagination on `(entry_date, id)` — more robust against rows shifting between page loads, but a single-user journal rarely has concurrent inserts, so offset is simpler for now.
 - **Status:** Decided
 
-### 2026-09-10 — A page reload ends the session rather than offering an unlock screen
+### 2026-09-29
 
-- **Decision:** The session cookie survives a reload but the in-memory key does not. On mount, if the keystore is empty, the client fires `DELETE /api/session` and shows the Auth screen. Two states, not three.
-- **Context:** The alternative — keep the session and prompt for the password to re-derive the key — is nicer UX but means every later slice has to handle an "authenticated but locked" state, and it really wants a server-side idle timeout to go with it.
-- **Trade-off accepted:** A refresh logs you out, which is mildly annoying in development. The unlock screen is a purely additive change later: same components, same endpoints.
-- **Status:** Decided (interim — expect to revisit alongside the app-level lock in the backlog)
+- **Decision:** Not encrypting tag colors for now.
+- **Context:** Plaintext colors _might_ reveal some information about the user's posts. Certain colors are probably used for certain things, like the color red might be more likely to be used for tags with negative or urgent connotations. The attacker would have to know enough about the user to make sense of color patterns though, so it's a pretty weak signal. The future tag manager would also have to re-encrypt the color if it's changed. It's probably not worth encrypting.
+- **Alternatives considered:** Encrypt the colors in the database. Low lift if we go that route.
+- **Status:** Open
 
 ---
 

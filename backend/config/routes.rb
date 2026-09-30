@@ -9,6 +9,7 @@ Rails.application.routes.draw do
     resources :journals, only: %i[index create] do
       resources :entries, only: %i[index show create update]
     end
+    resources :tags, only: %i[index create]
   end
 
   # Reveal health status on /up that returns 200 if the app boots with no exceptions, otherwise 500.
