@@ -145,6 +145,10 @@ export function createJournal(encryptedTitle: string): Promise<JournalRecord> {
   return request('POST', '/api/journals', { journal: { title: encryptedTitle } })
 }
 
+export function deleteJournal(journalId: number): Promise<null> {
+  return request('DELETE', `/api/journals/${journalId}`)
+}
+
 export function listEntries(journalId: number, page = 1): Promise<EntryPageRecord> {
   return request('GET', `/api/journals/${journalId}/entries?page=${page}`)
 }
@@ -163,6 +167,10 @@ export function updateEntry(
   fields: EncryptedEntryFields,
 ): Promise<EntryRecord> {
   return request('PATCH', `/api/journals/${journalId}/entries/${entryId}`, { entry: fields })
+}
+
+export function deleteEntry(journalId: number, entryId: number): Promise<null> {
+  return request('DELETE', `/api/journals/${journalId}/entries/${entryId}`)
 }
 
 export function listTags(): Promise<TagRecord[]> {

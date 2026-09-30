@@ -55,14 +55,23 @@
   list-style: none;
 }
 
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+}
+
 .item {
   display: block;
-  width: 100%;
+  flex: 1;
+  min-width: 0;
   padding: var(--space-4);
   font: inherit;
   color: var(--color-text);
   text-align: left;
-  background: var(--color-surface);
+  background: none;
   border: none;
   border-radius: var(--radius-md);
   cursor: pointer;
@@ -75,6 +84,7 @@
 
 .itemTitle {
   font-weight: 600;
+  overflow-wrap: anywhere;
 }
 
 .addButton {

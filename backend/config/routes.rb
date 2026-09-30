@@ -6,8 +6,8 @@ Rails.application.routes.draw do
     post "signup", to: "registrations#create"
     resource :session, only: %i[create destroy]
     get "me", to: "users#show"
-    resources :journals, only: %i[index create] do
-      resources :entries, only: %i[index show create update]
+    resources :journals, only: %i[index create destroy] do
+      resources :entries, only: %i[index show create update destroy]
     end
     resources :tags, only: %i[index create]
   end

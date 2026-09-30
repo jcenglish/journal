@@ -64,4 +64,36 @@ class JournalsTest < ActionDispatch::IntegrationTest
     ids = response.parsed_body.map { |journal| journal["id"] }
     assert_not_includes ids, journals(:two).id
   end
+
+  test "deleting a journal removes its entries and their tag associations" do
+    sign_in_as users(:one)
+    assert_equal [ entries(:one).id ], journals(:one).entries.ids
+    assert_equal 1, TagEntry.where(entry: entries(:one)).count
+
+    assert_difference -> { Journal.count } => -1, -> { Entry.count } => -1, -> { TagEntry.count } => -1 do
+      delete journal_path(journals(:one))
+    end
+
+    assert_response :no_content
+    assert Tag.exists?(tags(:one).id)
+    assert Journal.exists?(journals(:two).id)
+  end
+
+  test "requires authentication to delete a journal" do
+    assert_no_difference -> { Journal.count } do
+      delete journal_path(journals(:one))
+    end
+
+    assert_response :unauthorized
+  end
+
+  test "cannot delete another user's journal" do
+    sign_in_as users(:one)
+
+    assert_no_difference [ -> { Journal.count }, -> { Entry.count }, -> { TagEntry.count } ] do
+      delete journal_path(journals(:two))
+    end
+
+    assert_response :not_found
+  end
 end

@@ -17,7 +17,7 @@ const CHILD_ENTRY = { openedFromParent: true }
 
 function App() {
   const { user, logOut } = useAuth()
-  const { journals, error, create } = useJournals(user !== null)
+  const { journals, error, create, remove } = useJournals(user !== null)
   const [, navigate] = useLocation()
 
   // A session ending — an explicit logout or the reload policy in
@@ -62,6 +62,7 @@ function App() {
           error={error}
           onNewJournal={() => openChild('/journals/new')}
           onOpenJournal={(journalId) => openChild(`/journals/${journalId}`)}
+          onDeleteJournal={remove}
           onLogOut={() => void logOut()}
         />
       </Route>

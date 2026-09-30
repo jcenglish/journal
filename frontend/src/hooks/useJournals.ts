@@ -13,6 +13,7 @@ interface UseJournalsResult {
   journals: Journal[] | null
   error: string | null
   create: (title: string) => Promise<void>
+  remove: (journalId: number) => Promise<void>
 }
 
 async function decryptJournal(record: api.JournalRecord): Promise<Journal> {
@@ -57,5 +58,10 @@ export function useJournals(enabled: boolean): UseJournalsResult {
     setJournals((current) => [...(current ?? []), { id: record.id, title, createdAt: record.created_at }])
   }, [])
 
-  return { journals, error, create }
+  const remove = useCallback(async (journalId: number) => {
+    await api.deleteJournal(journalId)
+    setJournals((current) => current?.filter((journal) => journal.id !== journalId) ?? null)
+  }, [])
+
+  return { journals, error, create, remove }
 }
