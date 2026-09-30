@@ -9,6 +9,7 @@ interface UseEntriesResult {
   hasMore: boolean
   loadingMore: boolean
   loadMore: () => void
+  remove: (entryId: number) => Promise<void>
 }
 
 async function fetchPage(journalId: number, page: number) {
@@ -77,5 +78,31 @@ export function useEntries(journalId: number): UseEntriesResult {
       })
   }, [journalId, nextPage, loadingMore])
 
-  return { entries, error, hasMore: nextPage !== null, loadingMore, loadMore }
+  const remove = useCallback(
+    async (entryId: number) => {
+      const load = activeLoad.current
+      await api.deleteEntry(journalId, entryId)
+
+      setEntries((existing) => existing?.filter((entry) => entry.id !== entryId) ?? null)
+      if (nextPage === null) return
+
+      // Pages are offset-based, so the row that slid up into the last loaded
+      // page would otherwise be skipped by the next "load more" — refetch
+      // everything loaded so far instead.
+      try {
+        const pages = await Promise.all(
+          Array.from({ length: nextPage - 1 }, (_, index) => fetchPage(journalId, index + 1)),
+        )
+        if (load.cancelled) return
+        setEntries(pages.flatMap((page) => page.entries))
+        setNextPage(pages[pages.length - 1].nextPage)
+      } catch (caught) {
+        if (load.cancelled) return
+        setError(messageFrom(caught))
+      }
+    },
+    [journalId, nextPage],
+  )
+
+  return { entries, error, hasMore: nextPage !== null, loadingMore, loadMore, remove }
 }

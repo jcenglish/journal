@@ -16,6 +16,11 @@ class JournalsController < ApplicationController
     end
   end
 
+  def destroy
+    current_user.journals.find(params[:id]).destroy!
+    head :no_content
+  end
+
   private
     def journal_params
       params.require(:journal).permit(:title)

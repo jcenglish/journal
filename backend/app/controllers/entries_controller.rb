@@ -59,6 +59,11 @@ class EntriesController < ApplicationController
     end
   end
 
+  def destroy
+    @journal.entries.find(params[:id]).destroy!
+    head :no_content
+  end
+
   private
     def set_journal
       @journal = current_user.journals.find(params[:journal_id])

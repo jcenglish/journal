@@ -118,4 +118,38 @@ describe('useJournals', () => {
       { id: 2, title: 'Gratitude Log', createdAt: '2026-01-02T00:00:00.000Z' },
     ])
   })
+  it('removes a journal locally only after the server confirms the delete', async () => {
+    const dataKey = await unlock()
+    const records = await Promise.all(
+      ['Morning Pages', 'Gratitude Log'].map(async (title, index) => ({
+        id: index + 1,
+        title: await encryptWithKey(title, dataKey),
+        created_at: '2026-01-01T00:00:00.000Z',
+      })),
+    )
+    let deleteStatus = 500
+    const fetchMock = vi.fn(async (_path: string, init?: RequestInit) => {
+      if (init?.method === 'DELETE') {
+        return new Response(deleteStatus === 204 ? null : JSON.stringify({ error: 'Boom' }), { status: deleteStatus })
+      }
+      return new Response(JSON.stringify(records), { status: 200, headers: { 'Content-Type': 'application/json' } })
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const { result } = renderHook(() => useJournals(true))
+    await waitFor(() => expect(result.current.journals).toHaveLength(2))
+
+    await act(async () => {
+      await expect(result.current.remove(1)).rejects.toThrow('Boom')
+    })
+    expect(result.current.journals).toHaveLength(2)
+
+    deleteStatus = 204
+    await act(async () => {
+      await result.current.remove(1)
+    })
+
+    expect(result.current.journals?.map((journal) => journal.title)).toEqual(['Gratitude Log'])
+    expect(fetchMock).toHaveBeenLastCalledWith('/api/journals/1', expect.objectContaining({ method: 'DELETE' }))
+  })
 })

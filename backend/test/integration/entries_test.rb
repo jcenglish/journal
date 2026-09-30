@@ -249,4 +249,36 @@ class EntriesTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_equal [ tags(:one).id ], entries(:one).reload.tag_ids
   end
+
+  test "deletes an entry and its tag associations" do
+    sign_in_as users(:one)
+
+    assert_difference [ -> { Entry.count }, -> { TagEntry.count } ], -1 do
+      delete journal_entry_path(journals(:one), entries(:one))
+    end
+
+    assert_response :no_content
+    assert_not Entry.exists?(entries(:one).id)
+    assert Tag.exists?(tags(:one).id)
+  end
+
+  test "requires authentication to delete an entry" do
+    assert_no_difference -> { Entry.count } do
+      delete journal_entry_path(journals(:one), entries(:one))
+    end
+
+    assert_response :unauthorized
+  end
+
+  test "cannot delete another user's entry" do
+    sign_in_as users(:one)
+
+    assert_no_difference [ -> { Entry.count }, -> { TagEntry.count } ] do
+      delete journal_entry_path(journals(:two), entries(:two))
+      assert_response :not_found
+
+      delete journal_entry_path(journals(:one), entries(:two))
+      assert_response :not_found
+    end
+  end
 end
