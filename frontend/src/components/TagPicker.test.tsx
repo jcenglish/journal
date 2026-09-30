@@ -70,4 +70,35 @@ describe('TagPicker', () => {
     expect(onChange).toHaveBeenCalledWith([9])
     expect(screen.queryByRole('heading', { name: 'New Tag' })).not.toBeInTheDocument()
   })
+
+  it('selects an existing tag returned for a duplicate name without adding it twice', async () => {
+    const user = userEvent.setup()
+    const onChange = vi.fn()
+    const onCreateTag = vi.fn().mockResolvedValue(tags[0])
+    render(<TagPicker tags={tags} selectedIds={[]} onChange={onChange} onCreateTag={onCreateTag} labelId="tags" />)
+
+    await user.click(screen.getByRole('button', { name: 'Select tags' }))
+    await user.click(screen.getByRole('button', { name: '+ New tag' }))
+    await user.type(screen.getByLabelText('Name'), ' DUP ')
+    await user.click(screen.getByRole('button', { name: 'Create' }))
+
+    expect(onChange).toHaveBeenCalledWith([tags[0].id])
+  })
+
+  it('does not duplicate an id when the returned existing tag is already selected', async () => {
+    const user = userEvent.setup()
+    const onChange = vi.fn()
+    const onCreateTag = vi.fn().mockResolvedValue(tags[0])
+    render(
+      <TagPicker tags={tags} selectedIds={[tags[0].id]} onChange={onChange} onCreateTag={onCreateTag} labelId="tags" />,
+    )
+
+    await user.click(screen.getByRole('button', { name: tags[0].content }))
+    await user.click(screen.getByRole('button', { name: '+ New tag' }))
+    await user.type(screen.getByLabelText('Name'), 'dup')
+    await user.click(screen.getByRole('button', { name: 'Create' }))
+
+    expect(onChange).not.toHaveBeenCalled()
+    expect(screen.queryByRole('heading', { name: 'New Tag' })).not.toBeInTheDocument()
+  })
 })
