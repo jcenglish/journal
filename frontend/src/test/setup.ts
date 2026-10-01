@@ -8,6 +8,9 @@ import { afterEach } from 'vitest'
 // renders accumulate across tests in a file and every query finds duplicates.
 afterEach(cleanup)
 
+// Autosave drafts live in localStorage, which jsdom keeps for the whole file.
+afterEach(() => localStorage.clear())
+
 // jsdom implements only crypto.getRandomValues and crypto.randomUUID — there is
 // no SubtleCrypto, which the whole encryption layer depends on. It also installs
 // `crypto` as a getter with no setter, so a plain assignment throws in a module;

@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { deriveCredentials, encryptWithKey, generateWrappedDataKey } from '../lib/crypto'
@@ -69,7 +69,7 @@ async function fillEntry(user: ReturnType<typeof userEvent.setup>) {
 describe('EntryEditorPage', () => {
   it('defaults a new entry to today', () => {
     stubServer()
-    render(<EntryEditorPage journalId={3} entryId={null} onBack={vi.fn()} onSaved={vi.fn()} />)
+    render(<EntryEditorPage userId={1} journalId={3} entryId={null} onBack={vi.fn()} onSaved={vi.fn()} />)
 
     const today = new Date()
     const pad = (value: number) => String(value).padStart(2, '0')
@@ -83,7 +83,7 @@ describe('EntryEditorPage', () => {
     const user = userEvent.setup()
     const { stored } = stubServer()
     const onSaved = vi.fn()
-    const { unmount } = render(<EntryEditorPage journalId={3} entryId={null} onBack={vi.fn()} onSaved={onSaved} />)
+    const { unmount } = render(<EntryEditorPage userId={1} journalId={3} entryId={null} onBack={vi.fn()} onSaved={onSaved} />)
 
     await fillEntry(user)
     await user.click(screen.getByRole('button', { name: 'Save' }))
@@ -97,7 +97,7 @@ describe('EntryEditorPage', () => {
     expect(saved.entry_date).toBe('2026-09-05')
     unmount()
 
-    render(<EntryEditorPage journalId={3} entryId={1} onBack={vi.fn()} onSaved={vi.fn()} />)
+    render(<EntryEditorPage userId={1} journalId={3} entryId={1} onBack={vi.fn()} onSaved={vi.fn()} />)
 
     expect(await screen.findByRole('heading', { name: 'Edit Entry' })).toBeInTheDocument()
     expect(await screen.findByLabelText('Title (optional)')).toHaveValue('Sep 5')
@@ -110,14 +110,14 @@ describe('EntryEditorPage', () => {
   it('saves edits to an existing entry', async () => {
     const user = userEvent.setup()
     const { stored } = stubServer()
-    const first = render(<EntryEditorPage journalId={3} entryId={null} onBack={vi.fn()} onSaved={vi.fn()} />)
+    const first = render(<EntryEditorPage userId={1} journalId={3} entryId={null} onBack={vi.fn()} onSaved={vi.fn()} />)
     await fillEntry(user)
     await user.click(screen.getByRole('button', { name: 'Save' }))
     await waitFor(() => expect(stored.size).toBe(1))
     first.unmount()
 
     const onSaved = vi.fn()
-    const second = render(<EntryEditorPage journalId={3} entryId={1} onBack={vi.fn()} onSaved={onSaved} />)
+    const second = render(<EntryEditorPage userId={1} journalId={3} entryId={1} onBack={vi.fn()} onSaved={onSaved} />)
     await user.click(
       within(await screen.findByRole('group', { name: 'Mood' })).getByRole('radio', { name: '5' }),
     )
@@ -125,7 +125,7 @@ describe('EntryEditorPage', () => {
     await waitFor(() => expect(onSaved).toHaveBeenCalled())
     second.unmount()
 
-    render(<EntryEditorPage journalId={3} entryId={1} onBack={vi.fn()} onSaved={vi.fn()} />)
+    render(<EntryEditorPage userId={1} journalId={3} entryId={1} onBack={vi.fn()} onSaved={vi.fn()} />)
     const mood = within(await screen.findByRole('group', { name: 'Mood' }))
     expect(mood.getByRole('radio', { name: '5' })).toBeChecked()
     expect(stored.size).toBe(1)
@@ -134,7 +134,7 @@ describe('EntryEditorPage', () => {
   it('requires a mood and health rating before saving', async () => {
     const user = userEvent.setup()
     const { fetchMock } = stubServer()
-    render(<EntryEditorPage journalId={3} entryId={null} onBack={vi.fn()} onSaved={vi.fn()} />)
+    render(<EntryEditorPage userId={1} journalId={3} entryId={null} onBack={vi.fn()} onSaved={vi.fn()} />)
 
     await user.click(screen.getByRole('textbox', { name: 'Content' }))
     await user.keyboard('Something happened')
@@ -148,7 +148,7 @@ describe('EntryEditorPage', () => {
   it('requires content before saving', async () => {
     const user = userEvent.setup()
     const { fetchMock } = stubServer()
-    render(<EntryEditorPage journalId={3} entryId={null} onBack={vi.fn()} onSaved={vi.fn()} />)
+    render(<EntryEditorPage userId={1} journalId={3} entryId={null} onBack={vi.fn()} onSaved={vi.fn()} />)
 
     await user.click(screen.getByRole('button', { name: 'Save' }))
 
@@ -158,7 +158,7 @@ describe('EntryEditorPage', () => {
 
   it('shows an error instead of the form for an entry that cannot be loaded', async () => {
     stubServer()
-    render(<EntryEditorPage journalId={3} entryId={42} onBack={vi.fn()} onSaved={vi.fn()} />)
+    render(<EntryEditorPage userId={1} journalId={3} entryId={42} onBack={vi.fn()} onSaved={vi.fn()} />)
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Not Found')
     expect(screen.queryByRole('button', { name: 'Save' })).not.toBeInTheDocument()
@@ -170,7 +170,7 @@ describe('EntryEditorPage', () => {
     const content = await encryptWithKey('gratitude', dataKey)
     tags.set(1, { id: 1, content, color: '#2563eb', created_at: '2026-09-05T12:00:00.000Z' })
     const onSaved = vi.fn()
-    render(<EntryEditorPage journalId={3} entryId={null} onBack={vi.fn()} onSaved={onSaved} />)
+    render(<EntryEditorPage userId={1} journalId={3} entryId={null} onBack={vi.fn()} onSaved={onSaved} />)
 
     await fillEntry(user)
     await user.click(await screen.findByRole('button', { name: 'Select tags' }))
@@ -185,7 +185,7 @@ describe('EntryEditorPage', () => {
     const user = userEvent.setup()
     const { stored, tags } = stubServer()
     const onSaved = vi.fn()
-    render(<EntryEditorPage journalId={3} entryId={null} onBack={vi.fn()} onSaved={onSaved} />)
+    render(<EntryEditorPage userId={1} journalId={3} entryId={null} onBack={vi.fn()} onSaved={onSaved} />)
 
     await fillEntry(user)
     await user.click(await screen.findByRole('button', { name: 'Select tags' }))
@@ -207,10 +207,164 @@ describe('EntryEditorPage', () => {
     const user = userEvent.setup()
     stubServer()
     const onBack = vi.fn()
-    render(<EntryEditorPage journalId={3} entryId={null} onBack={onBack} onSaved={vi.fn()} />)
+    render(<EntryEditorPage userId={1} journalId={3} entryId={null} onBack={onBack} onSaved={vi.fn()} />)
 
     await user.click(screen.getByRole('button', { name: 'Back' }))
 
     expect(onBack).toHaveBeenCalled()
+  })
+
+  describe('autosave', () => {
+    beforeEach(() => {
+      vi.useFakeTimers({ shouldAdvanceTime: true })
+    })
+
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
+    const setupUser = () => userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    const draftsInStorage = () => Object.keys(localStorage).filter((key) => key.startsWith('journal:draft:'))
+
+    it('restores an unsaved draft after the tab is closed and reopened before the debounce fires', async () => {
+      const user = setupUser()
+      const { fetchMock } = stubServer()
+      const first = render(<EntryEditorPage userId={1} journalId={3} entryId={null} onBack={vi.fn()} onSaved={vi.fn()} />)
+      await user.type(screen.getByLabelText('Title (optional)'), 'Half-written')
+      await user.click(screen.getByRole('textbox', { name: 'Content' }))
+      await user.keyboard('Woke up early')
+      first.unmount()
+      fetchMock.mockClear()
+
+      render(<EntryEditorPage userId={1} journalId={3} entryId={null} onBack={vi.fn()} onSaved={vi.fn()} />)
+
+      expect(screen.getByLabelText('Title (optional)')).toHaveValue('Half-written')
+      expect(screen.getByRole('textbox', { name: 'Content' })).toHaveTextContent('Woke up early')
+      expect(screen.getByText('Restored your unsaved changes.')).toBeInTheDocument()
+    })
+
+    it("does not show one user's draft to another", async () => {
+      const user = setupUser()
+      stubServer()
+      const first = render(<EntryEditorPage userId={1} journalId={3} entryId={null} onBack={vi.fn()} onSaved={vi.fn()} />)
+      await user.type(screen.getByLabelText('Title (optional)'), 'Private')
+      first.unmount()
+
+      render(<EntryEditorPage userId={2} journalId={3} entryId={null} onBack={vi.fn()} onSaved={vi.fn()} />)
+
+      expect(screen.getByLabelText('Title (optional)')).toHaveValue('')
+    })
+
+    it('saves about a second and a half after typing stops, once, then keeps updating that entry', async () => {
+      const user = setupUser()
+      const { stored, fetchMock } = stubServer()
+      render(<EntryEditorPage userId={1} journalId={3} entryId={null} onBack={vi.fn()} onSaved={vi.fn()} />)
+      await fillEntry(user)
+
+      const requests = () => fetchMock.mock.calls.filter(([path]) => String(path).includes('/entries'))
+      expect(requests()).toHaveLength(0)
+      await act(() => vi.advanceTimersByTimeAsync(1600))
+      await waitFor(() => expect(stored.size).toBe(1))
+
+      await user.type(screen.getByLabelText('Title (optional)'), '!')
+      await act(() => vi.advanceTimersByTimeAsync(1600))
+      await waitFor(() => expect(requests()).toHaveLength(2))
+
+      expect(requests().map(([, init]) => init?.method)).toEqual(['POST', 'PATCH'])
+      expect(stored.size).toBe(1)
+      expect(await screen.findByText('All changes saved')).toBeInTheDocument()
+    })
+
+    it('does not send an unfinished entry, but keeps it as a local draft', async () => {
+      const user = setupUser()
+      const { fetchMock } = stubServer()
+      render(<EntryEditorPage userId={1} journalId={3} entryId={null} onBack={vi.fn()} onSaved={vi.fn()} />)
+
+      await user.click(screen.getByRole('textbox', { name: 'Content' }))
+      await user.keyboard('No ratings yet')
+      await act(() => vi.advanceTimersByTimeAsync(1600))
+
+      expect(fetchMock).not.toHaveBeenCalledWith(expect.stringContaining('/entries'), expect.anything())
+      expect(draftsInStorage()).toHaveLength(1)
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    })
+
+    it('clears the local draft once the server confirms an autosave', async () => {
+      const user = setupUser()
+      const { stored } = stubServer()
+      render(<EntryEditorPage userId={1} journalId={3} entryId={null} onBack={vi.fn()} onSaved={vi.fn()} />)
+      await fillEntry(user)
+      expect(draftsInStorage()).toHaveLength(1)
+
+      await act(() => vi.advanceTimersByTimeAsync(1600))
+
+      await waitFor(() => expect(stored.size).toBe(1))
+      await waitFor(() => expect(draftsInStorage()).toHaveLength(0))
+    })
+
+    it('clears the local draft once an explicit save is confirmed', async () => {
+      const user = setupUser()
+      const onSaved = vi.fn()
+      stubServer()
+      render(<EntryEditorPage userId={1} journalId={3} entryId={null} onBack={vi.fn()} onSaved={onSaved} />)
+      await fillEntry(user)
+
+      await user.click(screen.getByRole('button', { name: 'Save' }))
+
+      await waitFor(() => expect(onSaved).toHaveBeenCalled())
+      expect(draftsInStorage()).toHaveLength(0)
+    })
+
+    it('keeps the draft and says so when a save fails', async () => {
+      const user = setupUser()
+      const { fetchMock } = stubServer()
+      render(<EntryEditorPage userId={1} journalId={3} entryId={null} onBack={vi.fn()} onSaved={vi.fn()} />)
+      fetchMock.mockImplementation(async () => json({ error: 'Server error' }, 500))
+      await fillEntry(user)
+
+      await act(() => vi.advanceTimersByTimeAsync(1600))
+
+      expect(await screen.findByRole('status')).toHaveTextContent('Couldn’t save')
+      expect(draftsInStorage()).toHaveLength(1)
+    })
+
+    it('saves right away when the tab is hidden', async () => {
+      const user = setupUser()
+      const { stored } = stubServer()
+      render(<EntryEditorPage userId={1} journalId={3} entryId={null} onBack={vi.fn()} onSaved={vi.fn()} />)
+      await fillEntry(user)
+
+      vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden')
+      document.dispatchEvent(new Event('visibilitychange'))
+
+      await waitFor(() => expect(stored.size).toBe(1))
+    })
+
+    it('resumes the entry an earlier autosave created instead of creating a second one', async () => {
+      const user = setupUser()
+      const { stored, fetchMock } = stubServer()
+      const first = render(<EntryEditorPage userId={1} journalId={3} entryId={null} onBack={vi.fn()} onSaved={vi.fn()} />)
+      await fillEntry(user)
+      await act(() => vi.advanceTimersByTimeAsync(1600))
+      await waitFor(() => expect(stored.size).toBe(1))
+      fetchMock.mockImplementation(() => new Promise<Response>(() => {}))
+      await user.type(screen.getByLabelText('Title (optional)'), ' edited')
+      first.unmount()
+      await waitFor(() => expect(fetchMock).toHaveBeenCalled())
+      fetchMock.mockClear()
+      fetchMock.mockImplementation(async (_path, init) => {
+        const entry = { ...stored.get(1), ...JSON.parse(String(init?.body)).entry }
+        stored.set(1, entry)
+        return json(entry)
+      })
+
+      render(<EntryEditorPage userId={1} journalId={3} entryId={null} onBack={vi.fn()} onSaved={vi.fn()} />)
+      await act(() => vi.advanceTimersByTimeAsync(1600))
+
+      const entryRequests = () => fetchMock.mock.calls.filter(([path]) => String(path).includes('/entries'))
+      await waitFor(() => expect(entryRequests()).toHaveLength(1))
+      expect(entryRequests()[0][0]).toBe('/api/journals/3/entries/1')
+      expect(stored.size).toBe(1)
+    })
   })
 })
