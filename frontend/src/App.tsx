@@ -85,6 +85,7 @@ function App() {
           return (
             <EntryEditorPage
               key={`${journal.id}/${entryId}`}
+              userId={user.id}
               journalId={journal.id}
               entryId={id}
               onBack={() => goUp(journalPath)}
