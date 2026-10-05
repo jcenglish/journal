@@ -8,7 +8,7 @@ The server stores ciphertext and never sees the encryption key, so a database
 dump — or a compromised server — yields nothing readable. The trade-off is that
 there is no password reset: losing the password means losing the data.
 
-- `design-decisions.md` — why things are built the way they are, and what was rejected.
+- `docs/design-decisions.md` — why things are built the way they are, and what was rejected.
 - `CLAUDE.md` — conventions and data model, for both humans and Claude Code.
 
 ## Stack
@@ -115,20 +115,6 @@ and polyfills Web Crypto, which jsdom doesn't implement.
 CI (`.github/workflows/ci.yml`) runs the backend and frontend jobs in parallel on
 every push to `main` and every PR.
 
-## API
-
-Rails owns the `/api` prefix rather than having a proxy rewrite it away, so the
-Vite dev proxy and any production edge proxy stay the same trivial rule.
-
-| Method   | Path           | Purpose                                  |
-| -------- | -------------- | ---------------------------------------- |
-| `POST`   | `/api/signup`  | Create an account                        |
-| `POST`   | `/api/session` | Log in                                   |
-| `DELETE` | `/api/session` | Log out                                  |
-| `GET`    | `/api/me`      | Current user                             |
-| `GET`    | `/up`          | Health check (outside `/api`, for Kamal) |
-
-Journal, entry, and tag endpoints coming soon.
 
 ## Deployment
 
