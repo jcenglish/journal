@@ -228,6 +228,14 @@ A running record of technical decisions, why they were made, and what was consid
 - **Alternatives considered:** Encrypt the colors in the database. Low lift if we go that route.
 - **Status:** Open
 
+### 2026-09-30 — Autosave: implementation choices
+
+- **Decision:** Drafts are cached in `localStorage` (plaintext, per the caveat above), keyed by user, journal, and entry (`journal:draft:<user>:<journal>:<entry|new>`), and written synchronously on every change. Saves go through a one-at-a-time queue in `useEntry`: a save requested while another is in flight collapses into a single follow-up carrying the newest draft, so requests can't land out of order and two in-flight saves can't both create a new entry. The draft is cleared only when the confirmed save matches the latest edit. An autosave only reaches the server once the entry is valid (content, mood, and health set); until then it stays a local draft. The draft records the id of an entry an earlier autosave created, so a restored "new" draft updates that entry instead of duplicating it (falling back to a fresh create if that entry has since been deleted).
+- **Context:** A reload ends the session (see the reload policy in `AuthProvider`), so a restored draft is only visible after logging back in; that is why drafts outlive logout and are scoped by user id.
+- **Caveat:** An unsaved draft stays readable in `localStorage` after an explicit logout on a shared device. Clearing it on logout would also discard the work the cache exists to protect.
+- **Alternatives considered:** Per-request version numbers with the server ignoring stale ones (needs a backend change and can't stop two creates); aborting in-flight requests (the server may still apply an aborted one).
+- **Status:** Decided
+
 ---
 
 ## Open Questions

@@ -126,4 +126,151 @@ describe('useEntry', () => {
     )
     expect(fetchMock).not.toHaveBeenCalled()
   })
+
+  describe('save sequencing', () => {
+    function deferredServer() {
+      const resolvers: Array<(response: Response) => void> = []
+      const fetchMock = vi.fn<typeof fetch>(() => new Promise<Response>((resolve) => resolvers.push(resolve)))
+      vi.stubGlobal('fetch', fetchMock)
+      return { fetchMock, respond: (index: number, body: unknown) => resolvers[index](json(body, 200)) }
+    }
+
+    const titled = (title: string): EntryDraft => ({ ...draft, title })
+    const sentBody = (fetchMock: ReturnType<typeof deferredServer>['fetchMock'], index: number) =>
+      JSON.parse(String(fetchMock.mock.calls[index][1]?.body)).entry
+
+    it('holds a newer save until the older one resolves, so the newer content wins', async () => {
+      const { fetchMock, respond } = deferredServer()
+      const { result } = renderHook(() => useEntry(3, 9))
+      await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
+      respond(0, await record(9))
+      await waitFor(() => expect(result.current.entry).not.toBeNull())
+
+      let older!: Promise<number>
+      let newer!: Promise<number>
+      act(() => {
+        older = result.current.save(titled('older'))
+      })
+      await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2))
+      act(() => {
+        newer = result.current.save(titled('newer'))
+      })
+      await act(async () => {})
+      expect(fetchMock).toHaveBeenCalledTimes(2)
+
+      await act(async () => respond(1, await record(9, titled('older'))))
+      await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3))
+      await act(async () => respond(2, await record(9, titled('newer'))))
+      await act(async () => {
+        await Promise.all([older, newer])
+      })
+
+      expect(fetchMock.mock.calls.map(([, init]) => init?.method ?? 'GET')).toEqual(['GET', 'PATCH', 'PATCH'])
+      expect(sentBody(fetchMock, 1).title).not.toBe(sentBody(fetchMock, 2).title)
+    })
+
+    it('collapses saves requested during a request into one follow-up with the newest draft', async () => {
+      const { fetchMock, respond } = deferredServer()
+      const { result } = renderHook(() => useEntry(3, null))
+
+      let first!: Promise<number>
+      act(() => {
+        first = result.current.save(titled('one'))
+      })
+      await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
+      const second = result.current.save(titled('two'))
+      const third = result.current.save(titled('three'))
+      expect(third).toBe(second)
+
+      await act(async () => respond(0, { ...(await record(21, titled('one'))) }))
+      await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2))
+      await act(async () => respond(1, { ...(await record(21, titled('three'))) }))
+      await act(async () => {
+        await Promise.all([first, second])
+      })
+
+      expect(fetchMock).toHaveBeenCalledTimes(2)
+    })
+
+    it('creates a new entry once, then updates it', async () => {
+      const { fetchMock, respond } = deferredServer()
+      const { result } = renderHook(() => useEntry(3, null))
+
+      let first!: Promise<number>
+      let second!: Promise<number>
+      act(() => {
+        first = result.current.save(titled('one'))
+      })
+      await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
+      act(() => {
+        second = result.current.save(titled('two'))
+      })
+      await act(async () => respond(0, await record(21, titled('one'))))
+      await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2))
+      await act(async () => respond(1, await record(21, titled('two'))))
+
+      await expect(first).resolves.toBe(21)
+      await expect(second).resolves.toBe(21)
+      expect(fetchMock.mock.calls.map(([path, init]) => `${init?.method} ${path}`)).toEqual([
+        'POST /api/journals/3/entries',
+        'PATCH /api/journals/3/entries/21',
+      ])
+    })
+
+    it('continues an entry an earlier session already created instead of creating another', async () => {
+      const fetchMock = vi.fn<typeof fetch>(async () => json(await record(21)))
+      vi.stubGlobal('fetch', fetchMock)
+      const { result } = renderHook(() => useEntry(3, null, 21))
+
+      await act(() => result.current.save(draft))
+
+      expect(fetchMock.mock.calls[0][0]).toBe('/api/journals/3/entries/21')
+      expect(fetchMock.mock.calls[0][1]?.method).toBe('PATCH')
+    })
+
+    it('creates a fresh entry when the one a draft was resuming has been deleted', async () => {
+      const fetchMock = vi
+        .fn<typeof fetch>()
+        .mockResolvedValueOnce(json({ error: 'Not Found' }, 404))
+        .mockResolvedValueOnce(json(await record(30), 201))
+      vi.stubGlobal('fetch', fetchMock)
+      const { result } = renderHook(() => useEntry(3, null, 21))
+
+      await expect(act(() => result.current.save(draft))).resolves.toBe(30)
+
+      expect(fetchMock.mock.calls.map(([path, init]) => `${init?.method} ${path}`)).toEqual([
+        'PATCH /api/journals/3/entries/21',
+        'POST /api/journals/3/entries',
+      ])
+    })
+
+    it('does not fall back to creating when an existing entry opened for editing is missing', async () => {
+      const stored = await record(9)
+      const fetchMock = vi
+        .fn<typeof fetch>()
+        .mockResolvedValueOnce(json(stored))
+        .mockResolvedValueOnce(json({ error: 'Not Found' }, 404))
+      vi.stubGlobal('fetch', fetchMock)
+      const { result } = renderHook(() => useEntry(3, 9))
+      await waitFor(() => expect(result.current.entry).not.toBeNull())
+
+      await expect(act(() => result.current.save(draft))).rejects.toThrow('Not Found')
+
+      expect(fetchMock).toHaveBeenCalledTimes(2)
+    })
+
+    it('keeps saving after a failed save', async () => {
+      const fetchMock = vi
+        .fn<typeof fetch>()
+        .mockResolvedValueOnce(json({ error: 'boom' }, 500))
+        .mockResolvedValueOnce(json(await record(21)))
+      vi.stubGlobal('fetch', fetchMock)
+      const { result } = renderHook(() => useEntry(3, null))
+
+      await expect(act(() => result.current.save(draft))).rejects.toThrow('boom')
+      await act(() => result.current.save(draft))
+
+      expect(fetchMock).toHaveBeenCalledTimes(2)
+    })
+  })
 })
