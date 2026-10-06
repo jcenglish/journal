@@ -42,12 +42,14 @@ describe('drafts', () => {
     expect(loadDraft('k')).toBeNull()
   })
 
-  it('does not throw when storage is unavailable', () => {
+  it('reports whether the draft was written, without throwing when storage is unavailable', () => {
+    expect(storeDraft('k', stored)).toBe(true)
+
     const blocked = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
       throw new DOMException('full', 'QuotaExceededError')
     })
 
-    expect(() => storeDraft('k', stored)).not.toThrow()
+    expect(storeDraft('k', stored)).toBe(false)
 
     blocked.mockRestore()
   })

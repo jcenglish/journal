@@ -26,6 +26,9 @@ const STATUS_LABELS: Record<AutosaveStatus, string> = {
   error: 'Couldn’t save — your changes are kept on this device. We’ll try again as you keep editing.',
 }
 
+const DRAFT_STORAGE_WARNING =
+  'Couldn’t save a backup copy on this device. Your changes will still save to the server, but could be lost if this tab closes first.'
+
 export function EntryEditorPage({ userId, journalId, entryId, onBack, onSaved }: EntryEditorPageProps) {
   const key = draftKey(userId, journalId, entryId)
   const [restored] = useState(() => loadDraft(key))
@@ -171,6 +174,12 @@ function EntryForm({ entry, restored, draftKey, onSave, onSaved }: EntryFormProp
       <p className={styles.status} role="status">
         {STATUS_LABELS[autosave.status]}
       </p>
+
+      {autosave.draftStorageFailed && (
+        <p className={styles.status} role="status">
+          {DRAFT_STORAGE_WARNING}
+        </p>
+      )}
 
       {error && (
         <p className={styles.error} role="alert">

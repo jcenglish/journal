@@ -14,6 +14,8 @@ interface UseAutosaveOptions {
 
 interface UseAutosaveResult {
   status: AutosaveStatus
+  /** True when the last local draft write failed, so the text isn't protected against a crashed tab. */
+  draftStorageFailed: boolean
   change: (draft: EntryDraft) => void
   /** Saves now. Rejects if the save fails, including when the draft isn't valid yet. */
   flush: () => Promise<void>
@@ -28,6 +30,7 @@ export function useAutosave({
   delayMs = AUTOSAVE_DELAY_MS,
 }: UseAutosaveOptions): UseAutosaveResult {
   const [status, setStatus] = useState<AutosaveStatus>('idle')
+  const [draftStorageFailed, setDraftStorageFailed] = useState(false)
   const latest = useRef<EntryDraft | null>(null)
   const version = useRef(0)
   const serverId = useRef(initialServerId)
@@ -58,9 +61,10 @@ export function useAutosave({
     if (savedVersion === version.current) {
       latest.current = null
       clearDraft(draftKey)
+      setDraftStorageFailed(false)
       setStatus('saved')
     } else {
-      storeDraft(draftKey, { draft: latest.current!, serverId: serverId.current })
+      setDraftStorageFailed(!storeDraft(draftKey, { draft: latest.current!, serverId: serverId.current }))
       setStatus('idle')
     }
   }, [draftKey])
@@ -71,7 +75,7 @@ export function useAutosave({
     (draft: EntryDraft) => {
       latest.current = draft
       version.current += 1
-      storeDraft(draftKey, { draft, serverId: serverId.current })
+      setDraftStorageFailed(!storeDraft(draftKey, { draft, serverId: serverId.current }))
       clearTimeout(timer.current)
       timer.current = setTimeout(flushQuietly, delayMs)
     },
@@ -95,5 +99,5 @@ export function useAutosave({
     }
   }, [flushQuietly])
 
-  return { status, change, flush }
+  return { status, draftStorageFailed, change, flush }
 }

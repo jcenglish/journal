@@ -44,12 +44,14 @@ export function loadDraft(key: string): StoredDraft | null {
 }
 
 // Storage can be full or blocked (private mode); the draft cache is a safety
-// net, so failing to write it must never break editing.
-export function storeDraft(key: string, stored: StoredDraft): void {
+// net, so failing to write it must never break editing. Returns whether the
+// write succeeded so the caller can warn the user.
+export function storeDraft(key: string, stored: StoredDraft): boolean {
   try {
     localStorage.setItem(key, JSON.stringify(stored))
+    return true
   } catch {
-    return
+    return false
   }
 }
 

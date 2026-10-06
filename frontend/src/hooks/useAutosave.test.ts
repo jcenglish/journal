@@ -38,6 +38,21 @@ describe('useAutosave', () => {
     expect(save).not.toHaveBeenCalled()
   })
 
+  it('flags when the local draft cannot be written, and clears the flag once the server confirms', async () => {
+    const blocked = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new DOMException('full', 'QuotaExceededError')
+    })
+    const { result, save } = setup()
+
+    act(() => result.current.change(draft('a')))
+    expect(result.current.draftStorageFailed).toBe(true)
+    blocked.mockRestore()
+
+    await act(() => vi.advanceTimersByTimeAsync(1000))
+    expect(save).toHaveBeenCalledTimes(1)
+    expect(result.current.draftStorageFailed).toBe(false)
+  })
+
   it('saves once, with the latest draft, after the user stops changing it', async () => {
     const { result, save } = setup()
 

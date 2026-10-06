@@ -243,6 +243,21 @@ describe('EntryEditorPage', () => {
       expect(screen.getByText('Restored your unsaved changes.')).toBeInTheDocument()
     })
 
+    it('warns, without blocking editing, when the local draft cannot be stored', async () => {
+      const user = setupUser()
+      stubServer()
+      const blocked = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+        throw new DOMException('full', 'QuotaExceededError')
+      })
+      render(<EntryEditorPage userId={1} journalId={3} entryId={null} onBack={vi.fn()} onSaved={vi.fn()} />)
+
+      await user.type(screen.getByLabelText('Title (optional)'), 'Still typing')
+
+      expect(screen.getByText(/Couldn’t save a backup copy on this device/)).toBeInTheDocument()
+      expect(screen.getByLabelText('Title (optional)')).toHaveValue('Still typing')
+      blocked.mockRestore()
+    })
+
     it("does not show one user's draft to another", async () => {
       const user = setupUser()
       stubServer()
