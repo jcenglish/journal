@@ -1,14 +1,19 @@
-import { RATINGS, type Rating } from '../lib/entries'
-import styles from './RatingSelector.module.css'
+import { RATINGS, type Rating } from "../lib/entries";
+import styles from "./RatingSelector.module.css";
 
 interface RatingSelectorProps {
-  legend: string
-  name: string
-  value: number | null
-  onChange: (rating: Rating) => void
+  legend: string;
+  name: string;
+  value: number | null;
+  onChange: (rating: Rating) => void;
 }
 
-export function RatingSelector({ legend, name, value, onChange }: RatingSelectorProps) {
+export function RatingSelector({
+  legend,
+  name,
+  value,
+  onChange,
+}: RatingSelectorProps) {
   return (
     <fieldset className={styles.fieldset}>
       <legend className={styles.legend}>{legend}</legend>
@@ -28,5 +33,5 @@ export function RatingSelector({ legend, name, value, onChange }: RatingSelector
         ))}
       </div>
     </fieldset>
-  )
+  );
 }

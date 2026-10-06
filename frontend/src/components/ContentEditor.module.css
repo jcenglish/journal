@@ -33,7 +33,7 @@
   cursor: pointer;
 }
 
-.toolButton[aria-pressed='true'] {
+.toolButton[aria-pressed="true"] {
   color: var(--color-bg);
   background: var(--color-accent);
 }

@@ -1,5 +1,5 @@
-import { afterEach, describe, expect, it } from 'vitest'
-import { deriveCredentials, generateWrappedDataKey } from './crypto'
+import { afterEach, describe, expect, it } from "vitest";
+import { deriveCredentials, generateWrappedDataKey } from "./crypto";
 import {
   DecryptionError,
   VaultLockedError,
@@ -9,58 +9,64 @@ import {
   getDataKey,
   hasDataKey,
   setDataKey,
-} from './keystore'
+} from "./keystore";
 
 const unlock = async () => {
-  const { wrapKey } = await deriveCredentials('one@example.com', 'correct horse battery', {
-    iterations: 1_000,
-  })
-  const { dataKey } = await generateWrappedDataKey(wrapKey)
-  setDataKey(dataKey)
-  return dataKey
-}
+  const { wrapKey } = await deriveCredentials(
+    "one@example.com",
+    "correct horse battery",
+    {
+      iterations: 1_000,
+    },
+  );
+  const { dataKey } = await generateWrappedDataKey(wrapKey);
+  setDataKey(dataKey);
+  return dataKey;
+};
 
-afterEach(() => clearDataKey())
+afterEach(() => clearDataKey());
 
-describe('keystore', () => {
-  it('starts locked', () => {
-    expect(hasDataKey()).toBe(false)
-    expect(() => getDataKey()).toThrow(VaultLockedError)
-  })
+describe("keystore", () => {
+  it("starts locked", () => {
+    expect(hasDataKey()).toBe(false);
+    expect(() => getDataKey()).toThrow(VaultLockedError);
+  });
 
-  it('encrypts and decrypts once unlocked', async () => {
-    await unlock()
+  it("encrypts and decrypts once unlocked", async () => {
+    await unlock();
 
-    expect(hasDataKey()).toBe(true)
-    expect(await decrypt(await encrypt('a private thought'))).toBe('a private thought')
-  })
+    expect(hasDataKey()).toBe(true);
+    expect(await decrypt(await encrypt("a private thought"))).toBe(
+      "a private thought",
+    );
+  });
 
-  it('cannot decrypt after the key is cleared', async () => {
-    await unlock()
-    const envelope = await encrypt('a private thought')
+  it("cannot decrypt after the key is cleared", async () => {
+    await unlock();
+    const envelope = await encrypt("a private thought");
 
-    clearDataKey()
+    clearDataKey();
 
-    expect(hasDataKey()).toBe(false)
-    await expect(decrypt(envelope)).rejects.toThrow(VaultLockedError)
-  })
+    expect(hasDataKey()).toBe(false);
+    await expect(decrypt(envelope)).rejects.toThrow(VaultLockedError);
+  });
 
-  it('cannot decrypt an envelope from a previous key after re-unlocking', async () => {
-    await unlock()
-    const envelope = await encrypt('a private thought')
+  it("cannot decrypt an envelope from a previous key after re-unlocking", async () => {
+    await unlock();
+    const envelope = await encrypt("a private thought");
 
-    clearDataKey()
-    await unlock() // a fresh random data key
+    clearDataKey();
+    await unlock(); // a fresh random data key
 
-    await expect(decrypt(envelope)).rejects.toThrow(DecryptionError)
-  })
+    await expect(decrypt(envelope)).rejects.toThrow(DecryptionError);
+  });
 
-  it('never persists the key to browser storage', async () => {
-    const dataKey = await unlock()
-    await encrypt('a private thought')
+  it("never persists the key to browser storage", async () => {
+    const dataKey = await unlock();
+    await encrypt("a private thought");
 
-    expect(localStorage.length).toBe(0)
-    expect(sessionStorage.length).toBe(0)
-    expect(dataKey.extractable).toBe(false)
-  })
-})
+    expect(localStorage.length).toBe(0);
+    expect(sessionStorage.length).toBe(0);
+    expect(dataKey.extractable).toBe(false);
+  });
+});

@@ -1,167 +1,243 @@
-import { renderHook, waitFor } from '@testing-library/react'
-import { act } from 'react'
-import { afterEach, describe, expect, it, vi } from 'vitest'
-import { deriveCredentials, encryptWithKey, generateWrappedDataKey } from '../lib/crypto'
-import { clearDataKey, setDataKey } from '../lib/keystore'
-import { useTags } from './useTags'
+import { renderHook, waitFor } from "@testing-library/react";
+import { act } from "react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+  deriveCredentials,
+  encryptWithKey,
+  generateWrappedDataKey,
+} from "../lib/crypto";
+import { clearDataKey, setDataKey } from "../lib/keystore";
+import { useTags } from "./useTags";
 
 const unlock = async () => {
-  const { wrapKey } = await deriveCredentials('one@example.com', 'correct horse battery', { iterations: 1_000 })
-  const { dataKey } = await generateWrappedDataKey(wrapKey)
-  setDataKey(dataKey)
-  return dataKey
-}
+  const { wrapKey } = await deriveCredentials(
+    "one@example.com",
+    "correct horse battery",
+    { iterations: 1_000 },
+  );
+  const { dataKey } = await generateWrappedDataKey(wrapKey);
+  setDataKey(dataKey);
+  return dataKey;
+};
 
 afterEach(() => {
-  clearDataKey()
-  vi.unstubAllGlobals()
-})
+  clearDataKey();
+  vi.unstubAllGlobals();
+});
 
 const json = (body: unknown, status = 200) =>
-  new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { "Content-Type": "application/json" },
+  });
 
-describe('useTags', () => {
-  it('fetches and decrypts the current user\'s tags', async () => {
-    const dataKey = await unlock()
-    const envelope = await encryptWithKey('gratitude', dataKey)
+describe("useTags", () => {
+  it("fetches and decrypts the current user's tags", async () => {
+    const dataKey = await unlock();
+    const envelope = await encryptWithKey("gratitude", dataKey);
     vi.stubGlobal(
-      'fetch',
-      vi.fn(async () => json([{ id: 1, content: envelope, color: '#2563eb', created_at: '2026-01-01T00:00:00.000Z' }])),
-    )
+      "fetch",
+      vi.fn(async () =>
+        json([
+          {
+            id: 1,
+            content: envelope,
+            color: "#2563eb",
+            created_at: "2026-01-01T00:00:00.000Z",
+          },
+        ]),
+      ),
+    );
 
-    const { result } = renderHook(() => useTags())
+    const { result } = renderHook(() => useTags());
 
-    await waitFor(() => expect(result.current.tags).not.toBeNull())
-    expect(result.current.tags).toEqual([{ id: 1, content: 'gratitude', color: '#2563eb' }])
-    expect(result.current.error).toBeNull()
-  })
+    await waitFor(() => expect(result.current.tags).not.toBeNull());
+    expect(result.current.tags).toEqual([
+      { id: 1, content: "gratitude", color: "#2563eb" },
+    ]);
+    expect(result.current.error).toBeNull();
+  });
 
-  it('surfaces a fetch error', async () => {
-    await unlock()
-    vi.stubGlobal('fetch', vi.fn(async () => json({ error: 'Unauthorized' }, 401)))
+  it("surfaces a fetch error", async () => {
+    await unlock();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => json({ error: "Unauthorized" }, 401)),
+    );
 
-    const { result } = renderHook(() => useTags())
+    const { result } = renderHook(() => useTags());
 
-    await waitFor(() => expect(result.current.error).toBe('Unauthorized'))
-    expect(result.current.tags).toBeNull()
-  })
+    await waitFor(() => expect(result.current.error).toBe("Unauthorized"));
+    expect(result.current.tags).toBeNull();
+  });
 
-  it('marks a tag whose content will not decrypt as unreadable instead of throwing', async () => {
-    await unlock()
+  it("marks a tag whose content will not decrypt as unreadable instead of throwing", async () => {
+    await unlock();
     const otherKey = (
       await generateWrappedDataKey(
-        (await deriveCredentials('two@example.com', 'another password', { iterations: 1_000 })).wrapKey,
+        (
+          await deriveCredentials("two@example.com", "another password", {
+            iterations: 1_000,
+          })
+        ).wrapKey,
       )
-    ).dataKey
-    const envelope = await encryptWithKey('not yours', otherKey)
+    ).dataKey;
+    const envelope = await encryptWithKey("not yours", otherKey);
     vi.stubGlobal(
-      'fetch',
-      vi.fn(async () => json([{ id: 1, content: envelope, color: '#2563eb', created_at: '2026-01-01T00:00:00.000Z' }])),
-    )
+      "fetch",
+      vi.fn(async () =>
+        json([
+          {
+            id: 1,
+            content: envelope,
+            color: "#2563eb",
+            created_at: "2026-01-01T00:00:00.000Z",
+          },
+        ]),
+      ),
+    );
 
-    const { result } = renderHook(() => useTags())
+    const { result } = renderHook(() => useTags());
 
-    await waitFor(() => expect(result.current.tags).not.toBeNull())
-    expect(result.current.tags).toEqual([{ id: 1, content: '', color: '#2563eb', unreadable: true }])
-  })
+    await waitFor(() => expect(result.current.tags).not.toBeNull());
+    expect(result.current.tags).toEqual([
+      { id: 1, content: "", color: "#2563eb", unreadable: true },
+    ]);
+  });
 
-  it('creates a tag by sending ciphertext and appends the plaintext locally', async () => {
-    await unlock()
+  it("creates a tag by sending ciphertext and appends the plaintext locally", async () => {
+    await unlock();
     vi.stubGlobal(
-      'fetch',
+      "fetch",
       vi.fn(async (_path: string, init?: RequestInit) => {
-        if (init?.method !== 'POST') return json([])
+        if (init?.method !== "POST") return json([]);
 
-        const body = JSON.parse(String(init.body)) as { tag: { content: string; color: string } }
-        expect(body.tag.content).not.toBe('gratitude')
-        return json({ id: 3, content: body.tag.content, color: body.tag.color, created_at: '2026-01-02T00:00:00.000Z' }, 201)
+        const body = JSON.parse(String(init.body)) as {
+          tag: { content: string; color: string };
+        };
+        expect(body.tag.content).not.toBe("gratitude");
+        return json(
+          {
+            id: 3,
+            content: body.tag.content,
+            color: body.tag.color,
+            created_at: "2026-01-02T00:00:00.000Z",
+          },
+          201,
+        );
       }),
-    )
+    );
 
-    const { result } = renderHook(() => useTags())
-    await waitFor(() => expect(result.current.tags).toEqual([]))
+    const { result } = renderHook(() => useTags());
+    await waitFor(() => expect(result.current.tags).toEqual([]));
 
-    let created
+    let created;
     await act(async () => {
-      created = await result.current.create('gratitude', '#2563eb')
-    })
+      created = await result.current.create("gratitude", "#2563eb");
+    });
 
-    expect(created).toEqual({ id: 3, content: 'gratitude', color: '#2563eb' })
-    expect(result.current.tags).toEqual([{ id: 3, content: 'gratitude', color: '#2563eb' }])
-  })
+    expect(created).toEqual({ id: 3, content: "gratitude", color: "#2563eb" });
+    expect(result.current.tags).toEqual([
+      { id: 3, content: "gratitude", color: "#2563eb" },
+    ]);
+  });
 
-  it('rejects a blank tag name before sending anything', async () => {
-    await unlock()
-    const fetchMock = vi.fn(async () => json([]))
-    vi.stubGlobal('fetch', fetchMock)
+  it("rejects a blank tag name before sending anything", async () => {
+    await unlock();
+    const fetchMock = vi.fn(async () => json([]));
+    vi.stubGlobal("fetch", fetchMock);
 
-    const { result } = renderHook(() => useTags())
-    await waitFor(() => expect(result.current.tags).toEqual([]))
+    const { result } = renderHook(() => useTags());
+    await waitFor(() => expect(result.current.tags).toEqual([]));
 
-    await expect(result.current.create('   ', '#2563eb')).rejects.toThrow('Please enter a tag name.')
-    expect(fetchMock).toHaveBeenCalledTimes(1) // only the initial list fetch
-  })
+    await expect(result.current.create("   ", "#2563eb")).rejects.toThrow(
+      "Please enter a tag name.",
+    );
+    expect(fetchMock).toHaveBeenCalledTimes(1); // only the initial list fetch
+  });
 
-  describe('deduplication', () => {
+  describe("deduplication", () => {
     const setup = async () => {
-      const dataKey = await unlock()
-      const envelope = await encryptWithKey('Work', dataKey)
+      const dataKey = await unlock();
+      const envelope = await encryptWithKey("Work", dataKey);
       const fetchMock = vi.fn(async (_path: string, init?: RequestInit) => {
-        if (init?.method === 'POST') {
-          const body = JSON.parse(String(init.body)) as { tag: { content: string; color: string } }
-          expect(body.tag.content).not.toBe('Travel')
-          return json({ id: 2, content: body.tag.content, color: body.tag.color, created_at: '2026-01-02T00:00:00.000Z' }, 201)
+        if (init?.method === "POST") {
+          const body = JSON.parse(String(init.body)) as {
+            tag: { content: string; color: string };
+          };
+          expect(body.tag.content).not.toBe("Travel");
+          return json(
+            {
+              id: 2,
+              content: body.tag.content,
+              color: body.tag.color,
+              created_at: "2026-01-02T00:00:00.000Z",
+            },
+            201,
+          );
         }
-        return json([{ id: 1, content: envelope, color: '#2563eb', created_at: '2026-01-01T00:00:00.000Z' }])
-      })
-      vi.stubGlobal('fetch', fetchMock)
-      const hook = renderHook(() => useTags())
-      await waitFor(() => expect(hook.result.current.tags).toHaveLength(1))
-      return { ...hook, fetchMock }
-    }
+        return json([
+          {
+            id: 1,
+            content: envelope,
+            color: "#2563eb",
+            created_at: "2026-01-01T00:00:00.000Z",
+          },
+        ]);
+      });
+      vi.stubGlobal("fetch", fetchMock);
+      const hook = renderHook(() => useTags());
+      await waitFor(() => expect(hook.result.current.tags).toHaveLength(1));
+      return { ...hook, fetchMock };
+    };
 
-    it('returns the existing tag without a create request for a trimmed, case-insensitive match', async () => {
-      const { result, fetchMock } = await setup()
+    it("returns the existing tag without a create request for a trimmed, case-insensitive match", async () => {
+      const { result, fetchMock } = await setup();
 
-      let tag
+      let tag;
       await act(async () => {
-        tag = await result.current.create('  work ', '#ef4444')
-      })
+        tag = await result.current.create("  work ", "#ef4444");
+      });
 
-      expect(tag).toEqual({ id: 1, content: 'Work', color: '#2563eb' })
-      expect(fetchMock).toHaveBeenCalledTimes(1)
-      expect(result.current.tags).toHaveLength(1)
-    })
+      expect(tag).toEqual({ id: 1, content: "Work", color: "#2563eb" });
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(result.current.tags).toHaveLength(1);
+    });
 
-    it('leaves the existing tag color unchanged', async () => {
-      const { result } = await setup()
+    it("leaves the existing tag color unchanged", async () => {
+      const { result } = await setup();
 
-      let tag
+      let tag;
       await act(async () => {
-        tag = await result.current.create('WORK', '#ef4444')
-      })
+        tag = await result.current.create("WORK", "#ef4444");
+      });
 
-      expect(tag).toMatchObject({ id: 1, color: '#2563eb' })
-    })
+      expect(tag).toMatchObject({ id: 1, color: "#2563eb" });
+    });
 
-    it('rejects creation until the initial load has finished', async () => {
-      await unlock()
-      vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>(() => {})))
-      const { result } = renderHook(() => useTags())
+    it("rejects creation until the initial load has finished", async () => {
+      await unlock();
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(() => new Promise<Response>(() => {})),
+      );
+      const { result } = renderHook(() => useTags());
 
-      await expect(result.current.create('Work', '#ef4444')).rejects.toThrow('Tags are still loading')
-    })
+      await expect(result.current.create("Work", "#ef4444")).rejects.toThrow(
+        "Tags are still loading",
+      );
+    });
 
-    it('still creates a tag with a new name', async () => {
-      const { result, fetchMock } = await setup()
+    it("still creates a tag with a new name", async () => {
+      const { result, fetchMock } = await setup();
 
-      let tag
+      let tag;
       await act(async () => {
-        tag = await result.current.create('Travel', '#ef4444')
-      })
+        tag = await result.current.create("Travel", "#ef4444");
+      });
 
-      expect(tag).toEqual({ id: 2, content: 'Travel', color: '#ef4444' })
-      expect(fetchMock).toHaveBeenCalledTimes(2)
-    })
-  })
-})
+      expect(tag).toEqual({ id: 2, content: "Travel", color: "#ef4444" });
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+    });
+  });
+});
