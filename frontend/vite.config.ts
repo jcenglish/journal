@@ -21,5 +21,21 @@ export default defineConfig({
     // explicitly, which keeps both tsconfig and eslint.config.js free of
     // test-runner-specific globals config.
     globals: false,
+    coverage: {
+      provider: "v8",
+      // Without this, files no test imports are left out of the report and
+      // can't pull the numbers down.
+      include: ["src/**/*.{ts,tsx}"],
+      exclude: ["src/**/*.test.{ts,tsx}", "src/test/**", "src/**/*.d.ts"],
+      // Set below the measured baseline (about 94% statements, 86% branches), so
+      // a real regression fails CI but a small change doesn't. Raise as
+      // coverage grows.
+      thresholds: {
+        statements: 90,
+        lines: 90,
+        functions: 88,
+        branches: 80,
+      },
+    },
   },
 });

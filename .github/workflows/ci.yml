@@ -69,7 +69,7 @@ jobs:
       - run: npm ci
       - run: npm run format:check
       - run: npm run lint
-      - name: Run tests with coverage (thresholds enforced in vitest.config.ts)
+      - name: Run tests with coverage (thresholds enforced in vite.config.ts)
         run: npm run test -- --coverage
       - run: npm run build
 

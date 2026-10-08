@@ -30,6 +30,8 @@ ESLint config (`eslint.config.js`) is flat-config based: `@eslint/js` recommende
 
 Vitest + React Testing Library are set up. Vitest runs with `globals: false`, so test files import `describe`/`it`/`expect`/`vi` from `vitest` explicitly; `src/test/setup.ts` registers Testing Library's cleanup and polyfills Web Crypto, which jsdom doesn't implement.
 
+CI runs `npm run test -- --coverage` and fails below the global thresholds in `vite.config.ts` (`test.coverage.thresholds`). `npm run test` alone doesn't enforce them, so run it with `-- --coverage` before opening a PR.
+
 ## Mockups
 
 Rough wireframe mockups live at `docs/journal-mockups.png` — a single image with 8 labeled frames. Look at the frame(s) for the screen you're building rather than the whole image:
