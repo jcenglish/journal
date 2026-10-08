@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import * as api from "../lib/api";
 import { AuthContext, type AuthUser } from "../lib/authContext";
 import {
@@ -20,6 +20,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!hasDataKey()) void api.logOut().catch(() => {});
   }, []);
 
+  // A login or signup still in flight when the provider unmounts must not
+  // install a key afterwards: nothing would own it, and nothing would clear it.
+  // It also ends the session the server just opened, which would otherwise be
+  // left without a key to decrypt anything.
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
+
   async function logIn(email: string, password: string) {
     const { wrapKey, authHash } = await deriveCredentials(email, password);
     // Send the same normalized form the salt was built from. JS trim() strips
@@ -29,7 +41,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const account = await api.logIn(normalizeEmail(email), authHash);
 
     // Only after the request succeeds — a rejected login must leave no key behind.
-    setDataKey(await unwrapDataKey(account.encrypted_data_key, wrapKey));
+    const dataKey = await unwrapDataKey(account.encrypted_data_key, wrapKey);
+    if (!mounted.current) {
+      void api.logOut().catch(() => {});
+      return;
+    }
+    setDataKey(dataKey);
     setUser({ id: account.id, email: account.email });
   }
 
@@ -38,6 +55,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { dataKey, blob } = await generateWrappedDataKey(wrapKey);
     const account = await api.signUp(normalizeEmail(email), authHash, blob);
 
+    if (!mounted.current) {
+      void api.logOut().catch(() => {});
+      return;
+    }
     setDataKey(dataKey);
     setUser({ id: account.id, email: account.email });
   }
