@@ -65,9 +65,6 @@ Every slice must be verifiable, not just "looks done" — this is how Claude clo
 
   ## Manual testing
   - Steps for a human to test the PR manually
-
-  ## Session
-  Link to this Claude Code session (the `https://claude.ai/code/session_...` URL Claude Code already generates and links when it creates a PR). Omit this section only if no such link exists for how this PR was created.
   ```
 
 - If GitHub Actions with `@claude` is connected on this repo, it uses a Claude subscription token (not a separate API key) — be mindful that automated runs share the same usage pool as interactive sessions.
