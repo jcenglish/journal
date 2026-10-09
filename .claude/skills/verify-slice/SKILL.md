@@ -1,6 +1,6 @@
 ---
 name: verify-slice
-description: Run this repo's Definition of Done checklist (CLAUDE.md) against the current diff before calling a slice finished or opening a PR — runs bin/ci for backend changes and npm run build/lint (+ Vitest if configured) for frontend changes, and reports real command output.
+description: Run this repo's Definition of Done checklist (CLAUDE.md) against the current diff before calling a slice finished or opening a PR — runs bin/ci for backend changes and npm run build/lint plus Vitest with coverage thresholds for frontend changes, and reports real command output.
 ---
 
 # Verify slice
@@ -18,9 +18,8 @@ Use this when you believe a vertical slice is implementation-complete and are ab
    - Confirm request specs exist for any new/changed resource asserting cross-user access is denied (CLAUDE.md Security section) — grep the relevant `test/` files if unsure.
 
 3. **Frontend changes present:**
-   - From `frontend/`, run `npm run build` and `npm run lint`. Both must pass with no errors.
-   - If a Vitest test runner exists (`frontend/vitest.config.*` or a `test` script in `package.json`), also run the test suite.
-   - If new components were added and no test runner exists yet, this is the point to set one up (Vitest + React Testing Library) per CLAUDE.md — don't defer it further — then write and run tests for the new components.
+   - From `frontend/`, run `npm run build`, `npm run lint`, and `npm run test -- --coverage`. All must pass with no errors. The coverage flag matters: the thresholds in `vite.config.ts` (`test.coverage.thresholds`) are only enforced when it is passed, and CI runs it the same way.
+   - If new components were added, write and run tests for them (Vitest + React Testing Library, per `frontend/CLAUDE.md`).
 
 4. **Paste the actual output** of whichever commands ran (or a representative tail of it for long output) into your response to the user — not a summary claiming success. This is the evidence CLAUDE.md's Definition of Done requires.
 
