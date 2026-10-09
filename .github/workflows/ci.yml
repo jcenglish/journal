@@ -83,3 +83,40 @@ jobs:
         with:
           name: frontend-coverage
           path: frontend/coverage/
+
+  patch-coverage:
+    if: github.event_name == 'pull_request'
+    needs: [backend, frontend]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: backend-coverage
+          path: coverage/backend
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: frontend-coverage
+          path: coverage/frontend
+
+      # Both tools write source paths relative to their own project directory;
+      # diff-cover matches them against repo-root paths from git diff.
+      - name: Prefix coverage paths with project directory
+        run: |
+          sed -E 's#^SF:(\./)?#SF:backend/#' coverage/backend/lcov.info > coverage/backend.lcov
+          sed -E 's#^SF:(\./)?#SF:frontend/#' coverage/frontend/lcov.info > coverage/frontend.lcov
+
+      # diff-cover exits 0 when no changed line matches the report, so a path
+      # mismatch would otherwise pass the gate silently.
+      - name: Verify coverage paths resolve to repo files
+        run: |
+          cat coverage/backend.lcov coverage/frontend.lcov | grep '^SF:' | cut -c4- | while read -r file; do
+            [ -f "$file" ] || { echo "Coverage path not found in repo: $file"; exit 1; }
+          done
+
+      - name: Check coverage of changed lines
+        run: pipx run --spec diff-cover==10.6.0 diff-cover coverage/backend.lcov coverage/frontend.lcov --compare-branch=origin/main --fail-under=80

@@ -32,6 +32,8 @@ Vitest + React Testing Library are set up. Vitest runs with `globals: false`, so
 
 CI runs `npm run test -- --coverage` and fails below the global thresholds in `vite.config.ts` (`test.coverage.thresholds`). `npm run test` alone doesn't enforce them, so run it with `-- --coverage` before opening a PR.
 
+The same run writes `coverage/lcov.info`, which the `patch-coverage` CI job reads to check that the lines a PR changes are at least 80% covered (see the root `CLAUDE.md` Definition of done).
+
 ## Mockups
 
 Rough wireframe mockups live at `docs/journal-mockups.png` — a single image with 8 labeled frames. Look at the frame(s) for the screen you're building rather than the whole image:

@@ -23,6 +23,7 @@ export default defineConfig({
     globals: false,
     coverage: {
       provider: "v8",
+      reporter: ["text", "html", "lcov"],
       // Without this, files no test imports are left out of the report and
       // can't pull the numbers down.
       include: ["src/**/*.{ts,tsx}"],
