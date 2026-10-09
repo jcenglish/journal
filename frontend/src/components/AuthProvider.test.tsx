@@ -1,4 +1,10 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useAuth } from "../hooks/useAuth";
@@ -88,6 +94,8 @@ async function logIn() {
 beforeEach(() => stubApi());
 
 afterEach(() => {
+  // Unmount before clearing: an in-flight auth call must not outlive the key.
+  cleanup();
   clearDataKey();
   vi.unstubAllGlobals();
 });
@@ -185,6 +193,45 @@ describe("AuthProvider", () => {
     // afterEach has cleared it.
     await waitFor(() => expect(hasDataKey()).toBe(true));
   });
+
+  it.each(["logIn", "signUp"] as const)(
+    "installs no key and ends the session when it unmounts during %s",
+    async (action) => {
+      const fetchMock = stubApi();
+      let pending!: Promise<void>;
+      function Probe() {
+        const auth = useAuth();
+        return (
+          <button
+            type="button"
+            onClick={() => {
+              pending = auth[action](EMAIL, PASSWORD);
+            }}
+          >
+            Submit
+          </button>
+        );
+      }
+
+      const { unmount } = render(
+        <AuthProvider>
+          <Probe />
+        </AuthProvider>,
+      );
+      fireEvent.click(screen.getByRole("button", { name: "Submit" }));
+      unmount();
+      await pending;
+
+      expect(hasDataKey()).toBe(false);
+      await waitFor(() => {
+        const deletes = fetchMock.mock.calls.filter(
+          ([, init]) => init?.method === "DELETE",
+        );
+        // One from the mount-time stale-session cleanup, one from the guard.
+        expect(deletes).toHaveLength(2);
+      });
+    },
+  );
 
   it("holds no key when login is rejected", async () => {
     vi.stubGlobal(

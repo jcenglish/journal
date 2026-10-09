@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AuthProvider } from "../components/AuthProvider";
@@ -48,6 +48,16 @@ function stubApi() {
   return fetchMock;
 }
 
+function waitForPost(fetchMock: ReturnType<typeof stubApi>, path: string) {
+  return waitFor(() => {
+    const call = fetchMock.mock.calls.find(
+      ([url, init]) => String(url) === path && init?.method === "POST",
+    );
+    expect(call).toBeDefined();
+    return call!;
+  });
+}
+
 function renderPage() {
   return render(
     <AuthProvider>
@@ -66,6 +76,8 @@ async function fillAndSubmit(name: RegExp) {
 beforeEach(() => stubApi());
 
 afterEach(() => {
+  // Unmount before clearing: an in-flight auth call must not outlive the key.
+  cleanup();
   clearDataKey();
   vi.unstubAllGlobals();
 });
@@ -124,14 +136,11 @@ describe("AuthPage", () => {
 
     await fillAndSubmit(/^Log In$/);
 
-    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
-
-    const [path, init] = fetchMock.mock.calls.at(-1)!;
+    const [, init] = await waitForPost(fetchMock, "/api/session");
     const body = JSON.parse(String(init?.body)) as {
       session: { password: string };
     };
 
-    expect(String(path)).toBe("/api/session");
     expect(body.session.password).toHaveLength(44);
     expect(body.session.password).not.toBe(PASSWORD);
     expect(JSON.stringify(init)).not.toContain(PASSWORD);
@@ -147,14 +156,11 @@ describe("AuthPage", () => {
     await user.click(screen.getByRole("radio", { name: "Sign Up" }));
     await fillAndSubmit(/^Sign Up$/);
 
-    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
-
-    const [path, init] = fetchMock.mock.calls.at(-1)!;
+    const [, init] = await waitForPost(fetchMock, "/api/signup");
     const body = JSON.parse(String(init?.body)) as {
       user: { password: string; encrypted_data_key: string };
     };
 
-    expect(String(path)).toBe("/api/signup");
     expect(body.user.encrypted_data_key).toBeTruthy();
     expect(JSON.stringify(init)).not.toContain(PASSWORD);
 
