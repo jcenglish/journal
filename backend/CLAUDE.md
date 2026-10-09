@@ -21,6 +21,8 @@ bin/bundler-audit       # gem vulnerability audit
 
 `bin/ci` (defined in `config/ci.rb`) runs the full CI pipeline in order: setup → rubocop → bundler-audit → brakeman → `bin/rails test` → `db:seed:replant` in the test environment. Run this before considering backend work done.
 
+`bin/rails test` also writes `coverage/lcov.info` (via `simplecov-lcov`, configured in `test/test_helper.rb`). The `patch-coverage` CI job reads it to check that the lines a PR changes are at least 80% covered (see the root `CLAUDE.md` Definition of done).
+
 Database config (`config/database.yml`) expects a local Postgres with databases `backend_development` / `backend_test`; production uses `DATABASE_URL`/`BACKEND_DATABASE_PASSWORD` env vars and splits primary/cache/queue/cable databases.
 
 Local Postgres runs in Docker (Postgres 18 — see `docker-compose.yml` at repo root), reached over TCP rather than the default domain socket:
