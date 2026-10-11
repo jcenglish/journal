@@ -151,6 +151,13 @@ Rails' host allowlist. Pick a TLS source with `TLS_ARGS` in `deploy/.env`:
   `deploy/certs/` and set `TLS_ARGS=/certs/fullchain.pem /certs/key.pem`, e.g.
   from `tailscale cert <name>.ts.net` with `APP_HOST=<name>.ts.net`.
 
+The Caddyfile sends a Content-Security-Policy as `Content-Security-Policy-Report-Only`,
+so violations are logged in the browser console but nothing is blocked. Open
+the site on a desktop browser with DevTools, use the app (sign up, create a
+journal, write an entry), and check the console for "Content Security Policy"
+messages. When there are none, rename the header to `Content-Security-Policy`
+in `deploy/Caddyfile` to enforce it.
+
 Update with `git pull && docker compose up -d --build`; migrations run on boot.
 Back up with `docker compose exec postgres pg_dump -U backend backend_production`
 (plus the `_cache`, `_queue`, `_cable` databases if you care about them; only

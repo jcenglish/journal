@@ -252,6 +252,14 @@ A running record of technical decisions, why they were made, and what was consid
 - **Alternatives considered:** Kamal (its proxy gets certs via Let's Encrypt HTTP-01, which needs a publicly reachable host, so Caddy would still be needed in front); Rails serving the frontend (needs a catch-all route and gives up Caddy's static file handling).
 - **Status:** Decided
 
+### 2026-10-11 — Content-Security-Policy at the Caddy edge, report-only first
+
+- **Decision:** Caddy sends `Content-Security-Policy-Report-Only` with `default-src 'self'`, `script-src 'self'`, `connect-src 'self'`, `frame-ancestors 'none'`, `object-src 'none'`, `base-uri 'none'`, and `form-action 'self'`. `style-src` also allows `'unsafe-inline'`, and `img-src` allows `data:`. It switches to enforcing once the app has been exercised with no violations.
+- **Context:** The stated boundary (see the 2026-09-10 key-derivation entry) is that hostile JavaScript can read the in-memory key and decrypted entries. CSP doesn't remove the XSS or dependency bug that would let it in, but `script-src 'self'` blocks injected inline or third-party scripts and `connect-src 'self'` blocks sending data to another origin. The build has no inline scripts, external hosts, workers, `eval`, or CSS `url()` references, so a strict script policy should fit.
+- **Trade-off accepted:** `'unsafe-inline'` for styles, because editor libraries such as ProseMirror inject `<style>` elements; this doesn't permit script execution. Report-only logs violations in the browser console only, with no reporting endpoint, so verification is a manual pass in desktop DevTools.
+- **Alternatives considered:** Enforcing from the start (can't be checked without driving the real editor in a browser); a nonce-based `style-src` (needs per-request nonces injected into `index.html`, which static serving doesn't do).
+- **Status:** Decided
+
 ---
 
 ## Open Questions
