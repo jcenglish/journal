@@ -1,14 +1,16 @@
 # Journal
 
-A private, single-user journaling app. Entries carry a date (sometimes backdated), an
+**Functionally complete!**
+
+A private journaling app that multiple authenticated users can use. Entries carry a date (sometimes backdated), an
 optional title, a mood and health rating, and tags.
 
 Everything personal is **encrypted in the browser before it reaches the server**.
 The server stores ciphertext and never sees the encryption key, so a database
-dump — or a compromised server — yields nothing readable. The trade-off is that
-there is no password reset: losing the password means losing the data.
+dump — or a compromised server — yields nothing readable. **The trade-off is that
+there is no password reset: losing the password means losing the data.**
 
-- `docs/design-decisions.md` — why things are built the way they are, and what was rejected.
+- `docs/design-decisions.md` — why things are built the way they are, what was rejected, and future features.
 - `CLAUDE.md` — conventions and data model, for both humans and Claude Code.
 
 ## Stack
@@ -114,7 +116,6 @@ and polyfills Web Crypto, which jsdom doesn't implement.
 
 CI (`.github/workflows/ci.yml`) runs the backend and frontend jobs in parallel on
 every push to `main` and every PR.
-
 
 ## Deployment
 

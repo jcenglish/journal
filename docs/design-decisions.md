@@ -236,11 +236,19 @@ A running record of technical decisions, why they were made, and what was consid
 - **Alternatives considered:** Per-request version numbers with the server ignoring stale ones (needs a backend change and can't stop two creates); aborting in-flight requests (the server may still apply an aborted one).
 - **Status:** Decided
 
+### 2026-10-08 — Client-side routing: wouter, replacing manual view state
+
+- **Decision:** Use `wouter` for routing. Replace the `type View = 'home' | 'createJournal'` state in `App.tsx`.
+- **Context:** Slice 4 breaks the manual approach, because the journal and entry screens need ids a bare view string can't carry. Reload ending the session (2026-09-10) weakens the usual router payoff, bookmarkable URLs. The deciding factor was mobile-first: the phone's back gesture runs on the browser History API, so a custom state stack would have needed hand-written `pushState`/`popstate` wiring.
+- **Must carry over:** the `lastUserId` reset in `App.tsx`, which returns to Home when the signed-in user changes. It came from a bug found in slice 3's code review (a stale Create Journal screen surviving a logout and a different login on the same tab) and has a regression test.
+- **Alternatives considered:** Custom discriminated-union stack (zero dependencies, best typing, but loses the back gesture without extra work). React Router (heavier, same string-param issue).
+- **Status:** Decided
+
 ---
 
 ## Open Questions
 
-None currently open — the four questions from the initial schema pass were resolved above.
+None.
 
 ---
 
@@ -253,6 +261,8 @@ Captured ideas, not commitments. Won't build all of these — keeping them writt
 - **Entry image uploads** — Active Storage decision stands; upload UI deferred from the first frontend pass.
 - **Journal cover images** — same as above.
 - **Tag Manager view** — dedicated view for renaming/deleting/recoloring tags outside the entry editor; MVP uses dropdown + inline-create modal instead (see Decisions).
+- **Local backup** - user can download decrypted entries in some readable format.
+- **Import** - user can import entries from some other source. Will probably just be a manual script for my own use.
 
 ### Low-effort, fits current schema
 
@@ -262,10 +272,17 @@ Captured ideas, not commitments. Won't build all of these — keeping them writt
 ### Differentiators, fit the zero-knowledge direction
 
 - **Export/backup** — client-side decrypt-and-download of entries (JSON/Markdown). Originally scoped as a partial mitigation for "lost my key." A second, distinct motivation surfaced later: AES-GCM's authentication tag means a tampered ciphertext blob fails to decrypt permanently — by design, there is no partial or degraded recovery, and there shouldn't be (bypassing the tag check would defeat the point of authenticated encryption). A backup taken before the tampering is the only recovery path for that specific entry. Two independent reasons now point at the same feature.
-- **App-level lock** — PIN/biometric on top of login, auto-lock after inactivity.
-- **Multiple journals per user** — schema (Journal as its own table) already supports this; mainly a UI addition.
-- **Mood/health trend charts** — now that mood/health are encrypted, this is a client-side rolling-average calc over already-decrypted entries rather than a server-side SQL aggregate (same "detection is free, already decrypted" reasoning as the AI mood trend idea below).
-- **Search/filter entries by tag** — Tag content is now encrypted, so this is client-side filtering over the user's decrypted tag list (small, per-user — no blind indexing needed) rather than a server-side SQL join.
+- **App-level lock** — Biometrics can't replace the password: the fingerprint never leaves the device's secure hardware, so it can only gate a key stored on that device. The password stays the only portable way to rebuild the key on a new device, so the no-reset warning still applies.
+- **Mood/health trend charts** — Because mood/health are encrypted, this is a client-side rolling-average calc over already-decrypted entries rather than a server-side SQL aggregate (same "detection is free, already decrypted" reasoning as the AI mood trend idea below).
+- **Search/filter entries by tag** — Tag content is encrypted, so this is client-side filtering over the user's decrypted tag list (small, per-user — no blind indexing needed) rather than a server-side SQL join.
+- **Handwriting import (on-device OCR)** — Cloud OCR APIs (Google Vision, Textract, Azure) are disqualified, since they'd receive plaintext journal content before encryption. Run it in the browser before encryption: TrOCR through Transformers.js (`@huggingface/transformers`, a published handwriting model). Weights are a one-time download of tens to low hundreds of MB, cached in the browser, and should be self-hosted from Rails so the app makes no third-party runtime calls. Tesseract.js is easier but weaker on handwriting. Fine-tuning on your own handwriting, if the stock model isn't good enough, can run locally (PyTorch on your own machine, exported to ONNX), but it's a separate project in its own right.
+- **Native app shell** — Narrows the hostile-JavaScript limit, because the code is fixed until you approve an update, but doesn't close it. Supply-chain attacks on signed updates still exist, and a WebView pointed at a remote URL or an over-the-air bundle updater would reintroduce the original hole.
+
+### CI/CD and tooling
+
+- **Deploy and checks** — Kamal deploy on merge to `main` (depends on the hosting decision), axe-core or Lighthouse CI accessibility checks, and an unsafe-migration check.
+- **Observability within the zero-knowledge constraint** — An error tracker scrubbing the same fields as the log filter, behavior-only metrics (auth failure rate, rate-limit trips, latency, decrypt error rate), and the `/up` health check.
+- **Skills worth writing** — A crypto/security primer skill, an IDOR scan for controllers, and a decision-log format skill that prompts a "what this does not protect against" table. Generic React and Rails best-practice skills aren't worth it, since the linters and CLAUDE.md already cover them.
 
 ### Conflicts with zero-knowledge — decide consciously before building
 
