@@ -288,7 +288,7 @@ Captured ideas, not commitments. Won't build all of these — keeping them writt
 
 ### CI/CD and tooling
 
-- **Deploy and checks** — Kamal deploy on merge to `main` (depends on the hosting decision), axe-core or Lighthouse CI accessibility checks, and an unsafe-migration check.
+- **Deploy and checks** — Deploy on merge to `main` (currently a manual `docker compose up -d --build`; see the 2026-10-11 hosting decision), axe-core or Lighthouse CI accessibility checks, and an unsafe-migration check.
 - **Observability within the zero-knowledge constraint** — An error tracker scrubbing the same fields as the log filter, behavior-only metrics (auth failure rate, rate-limit trips, latency, decrypt error rate), and the `/up` health check.
 - **Skills worth writing** — A crypto/security primer skill, an IDOR scan for controllers, and a decision-log format skill that prompts a "what this does not protect against" table. Generic React and Rails best-practice skills aren't worth it, since the linters and CLAUDE.md already cover them.
 

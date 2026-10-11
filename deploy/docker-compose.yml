@@ -25,6 +25,7 @@ services:
       BACKEND_DATABASE_PASSWORD: ${BACKEND_DATABASE_PASSWORD}
       APP_HOST: ${APP_HOST:?set APP_HOST in deploy/.env}
       SOLID_QUEUE_IN_PUMA: "true"
+      FORWARD_HEADERS: "true"
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://localhost/up"]
       interval: 10s
@@ -46,6 +47,7 @@ services:
     ports:
       - "80:80"
       - "443:443"
+      - "443:443/udp"
     volumes:
       - caddy-data:/data
       - ./certs:/certs:ro

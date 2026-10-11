@@ -147,6 +147,8 @@ Update with `git pull && docker compose up -d --build`; migrations run on boot.
 Back up with `docker compose exec postgres pg_dump -U backend backend_production`
 (plus the `_cache`, `_queue`, `_cable` databases if you care about them; only
 the first holds journal data, and it's ciphertext). `config/master.key` is
-needed to boot and isn't in git, so keep a copy somewhere safe.
+needed to boot and isn't in git, so keep a copy somewhere safe. If you use the
+`internal` CA, the `caddy-data` volume holds its root key; deleting it (e.g.
+`down -v`) means re-trusting a new root cert on every device.
 
 `backend/config/deploy.yml` (Kamal) is still the Rails default and isn't used.
