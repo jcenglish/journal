@@ -244,6 +244,14 @@ A running record of technical decisions, why they were made, and what was consid
 - **Alternatives considered:** Custom discriminated-union stack (zero dependencies, best typing, but loses the back gesture without extra work). React Router (heavier, same string-param issue).
 - **Status:** Decided
 
+### 2026-10-11 — Hosting: Docker Compose + Caddy on a LAN box, not Kamal
+
+- **Decision:** Run Postgres, the Rails image, and a Caddy image (frontend `dist` baked in) via `deploy/docker-compose.yml`. Caddy serves the SPA with an `index.html` fallback, proxies `/api` to Rails, and terminates TLS. Rails runs with `assume_ssl`, `force_ssl`, and a `config.hosts` allowlist from `APP_HOST`.
+- **Context:** The app is for one person on their home network, to avoid a monthly hosting fee (#35). HTTPS is required even on the LAN because Web Crypto only exists in secure contexts, and the Secure session cookie needs it too. Caddy at the edge keeps the single origin the CSRF posture depends on, with the same `/api` rule as the Vite dev proxy.
+- **Trade-off accepted:** Certificates on a private network are the user's problem. The default is Caddy's internal CA, which each device must trust; real certs (e.g. Tailscale) can be supplied through `TLS_ARGS`. Deploys are a manual `git pull && docker compose up -d --build`, not push-to-deploy.
+- **Alternatives considered:** Kamal (its proxy gets certs via Let's Encrypt HTTP-01, which needs a publicly reachable host, so Caddy would still be needed in front); Rails serving the frontend (needs a catch-all route and gives up Caddy's static file handling).
+- **Status:** Decided
+
 ---
 
 ## Open Questions

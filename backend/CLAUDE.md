@@ -1,6 +1,6 @@
 # Backend (`backend/`)
 
-Rails 8.1, `config.api_only = true`. Uses the Solid trio (`solid_cache`, `solid_queue`, `solid_cable`) instead of Redis, so background jobs/cache/cable are backed by the database (see `db/cache_schema.rb`, `db/queue_schema.rb`, `db/cable_schema.rb`, `config/recurring.yml`). Deployment is via Kamal (`config/deploy.yml`, `.kamal/`).
+Rails 8.1, `config.api_only = true`. Uses the Solid trio (`solid_cache`, `solid_queue`, `solid_cable`) instead of Redis, so background jobs/cache/cable are backed by the database (see `db/cache_schema.rb`, `db/queue_schema.rb`, `db/cable_schema.rb`, `config/recurring.yml`). Production runs from `deploy/docker-compose.yml` behind Caddy (see README Deployment); the Kamal files (`config/deploy.yml`, `.kamal/`) are the unused Rails defaults.
 
 All commands below are run from `backend/`.
 

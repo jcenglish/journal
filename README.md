@@ -22,14 +22,15 @@ there is no password reset: losing the password means losing the data.**
 | Frontend | React 19, TypeScript, Vite, CSS Modules                       |
 | Crypto   | Web Crypto API, client-side only                              |
 | Tests    | Minitest (backend), Vitest + React Testing Library (frontend) |
-| Deploy   | Kamal (Docker)                                                |
+| Deploy   | Docker Compose + Caddy (self-hosted, LAN)                     |
 
 ## Layout
 
 ```
 backend/    Rails API — owns the /api prefix, JSON only
 frontend/   React + TypeScript SPA (Vite)
-docker-compose.yml   local Postgres
+docker-compose.yml   local Postgres (dev)
+deploy/     self-hosting: Compose stack, Caddyfile, web image
 ```
 
 ## Prerequisites
@@ -119,5 +120,33 @@ every push to `main` and every PR.
 
 ## Deployment
 
-Kamal, configured in `backend/config/deploy.yml` and `backend/.kamal/`. The
-frontend builds to static assets with `npm run build`.
+Self-hosted on a LAN box with Docker Compose (`deploy/`): Postgres, the Rails
+API, and Caddy, which serves `frontend/dist` at `/`, proxies `/api` to Rails, and
+terminates TLS. One origin, which the cookie/CSRF design requires. HTTPS is
+mandatory, not cosmetic: Web Crypto (`crypto.subtle`) only exists in secure
+contexts, so the app can't derive keys over plain `http://<lan-ip>`.
+
+```sh
+cd deploy
+cp .env.example .env     # set APP_HOST, RAILS_MASTER_KEY, BACKEND_DATABASE_PASSWORD
+docker compose up -d --build
+```
+
+`APP_HOST` is the hostname you'll visit and must resolve to the server (router
+DNS entry, `/etc/hosts`, or a Tailscale name). It's used for the TLS cert and
+Rails' host allowlist. Pick a TLS source with `TLS_ARGS` in `deploy/.env`:
+
+- **`internal` (default):** Caddy's own CA. Export its root cert
+  (`docker compose cp web:/data/caddy/pki/authorities/local/root.crt .`) and
+  trust it on the phone.
+- **Real cert, no device setup:** put `fullchain.pem` and `key.pem` in
+  `deploy/certs/` and set `TLS_ARGS=/certs/fullchain.pem /certs/key.pem`, e.g.
+  from `tailscale cert <name>.ts.net` with `APP_HOST=<name>.ts.net`.
+
+Update with `git pull && docker compose up -d --build`; migrations run on boot.
+Back up with `docker compose exec postgres pg_dump -U backend backend_production`
+(plus the `_cache`, `_queue`, `_cable` databases if you care about them; only
+the first holds journal data, and it's ciphertext). `config/master.key` is
+needed to boot and isn't in git, so keep a copy somewhere safe.
+
+`backend/config/deploy.yml` (Kamal) is still the Rails default and isn't used.
