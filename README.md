@@ -136,9 +136,17 @@ docker compose up -d --build
 DNS entry, `/etc/hosts`, or a Tailscale name). It's used for the TLS cert and
 Rails' host allowlist. Pick a TLS source with `TLS_ARGS` in `deploy/.env`:
 
-- **`internal` (default):** Caddy's own CA. Export its root cert
-  (`docker compose cp web:/data/caddy/pki/authorities/local/root.crt .`) and
-  trust it on the phone.
+- **`internal` (default, what this setup uses):** Caddy's own CA. Leaf certs
+  renew automatically; the root is valid for 10 years. Trust it once per device:
+  1. On the server, after the first `up`:
+     `docker compose cp web:/data/caddy/pki/authorities/local/root.crt .`
+  2. Get `root.crt` onto the phone (AirDrop, email, or a USB transfer).
+  3. **iOS:** open the file, allow the profile download, install it under
+     Settings > General > VPN & Device Management, then enable it under
+     Settings > General > About > Certificate Trust Settings.
+     **Android:** Settings > Security > Encryption & credentials > Install a
+     certificate > CA certificate.
+  4. Visit `https://<APP_HOST>`; there should be no warning.
 - **Real cert, no device setup:** put `fullchain.pem` and `key.pem` in
   `deploy/certs/` and set `TLS_ARGS=/certs/fullchain.pem /certs/key.pem`, e.g.
   from `tailscale cert <name>.ts.net` with `APP_HOST=<name>.ts.net`.
