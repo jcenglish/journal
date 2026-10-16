@@ -173,5 +173,10 @@ cp deploy/.env.example deploy/.env   # set APP_HOST, RAILS_MASTER_KEY, BACKEND_D
 docker compose -f deploy/docker-compose.yml up -d --build
 ```
 
-`APP_HOST` must match the hostname in the certificate. `deploy/.env` is
+`APP_HOST` must match the hostname in the certificate. Always browse via that
+hostname: Rails rejects requests that arrive with any other `Host`, including
+the bare IP (which is in the certificate only so TLS validates). Postgres reads
+`BACKEND_DATABASE_PASSWORD` only when its volume is first created, so changing
+it later means resetting the volume (`docker compose down -v` deletes all data)
+or changing the password inside Postgres. `deploy/.env` is
 gitignored; never commit it, `master.key`, or anything in `deploy/certs/`.

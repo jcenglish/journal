@@ -15,4 +15,11 @@ class ApiNotFoundTest < ActionDispatch::IntegrationTest
     assert_response :not_found
     assert_equal({ "error" => "Not Found" }, response.parsed_body)
   end
+
+  test "bare api path returns a JSON 404" do
+    get "/api", headers: { "Accept" => "text/html" }
+
+    assert_response :not_found
+    assert_equal({ "error" => "Not Found" }, response.parsed_body)
+  end
 end

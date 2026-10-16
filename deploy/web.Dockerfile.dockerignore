@@ -1,0 +1,7 @@
+**/node_modules
+frontend/dist
+frontend/coverage
+backend
+.git
+deploy/certs
+deploy/.env

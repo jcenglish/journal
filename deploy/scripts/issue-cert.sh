@@ -22,6 +22,11 @@ if [ ! -f "$ca_dir/ca.key" ]; then
   echo "Created CA in $ca_dir. Back up ca.key securely; install ca.pem on each device."
 fi
 
+if [ ! -f "$ca_dir/ca.pem" ]; then
+  echo "Found $ca_dir/ca.key but no ca.pem. Restore ca.pem from backup, or delete the CA dir to start a new CA (devices must then trust the new root)." >&2
+  exit 1
+fi
+
 tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
 
