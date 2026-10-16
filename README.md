@@ -30,6 +30,7 @@ there is no password reset: losing the password means losing the data.**
 backend/    Rails API — owns the /api prefix, JSON only
 frontend/   React + TypeScript SPA (Vite)
 docker-compose.yml   local Postgres
+deploy/     production-style stack: nginx (HTTPS), Rails, Postgres
 ```
 
 ## Prerequisites
@@ -119,5 +120,58 @@ every push to `main` and every PR.
 
 ## Deployment
 
-Kamal, configured in `backend/config/deploy.yml` and `backend/.kamal/`. The
-frontend builds to static assets with `npm run build`.
+`deploy/docker-compose.yml` runs nginx, Rails, and Postgres on one machine (for
+example an old Mac on your LAN). nginx is the only published entry point
+(ports 80 and 443): it terminates TLS, serves the built frontend, and proxies
+`/api/` to Rails, so the browser sees a single origin. Its config is
+`deploy/nginx/nginx.conf`. See `docs/design-decisions.md` for why this is
+compose with nginx and not Kamal.
+
+### 1. Hostname and DNS
+
+Pick a hostname (for example `journal.lan`) and make it resolve to the server's
+LAN IP: a local DNS record on your router, or an `/etc/hosts` entry on each
+device. Give the server a fixed IP (DHCP reservation).
+
+### 2. Issue the certificate (on your dev machine, not the server)
+
+```sh
+deploy/scripts/issue-cert.sh journal.lan 192.168.1.50
+```
+
+This creates a private CA in `~/.journal-ca/` the first time (`ca.key`,
+`ca.pem`) and writes a 365-day leaf certificate to `deploy/certs/fullchain.pem`
+and `deploy/certs/key.pem` with the hostname and IP as SANs. Copy only those
+two files to the server's `deploy/certs/` (`chmod 600 key.pem`). Keep `ca.key`
+off the server and out of git, and back it up somewhere safe. The certs are
+gitignored.
+
+To reissue before expiry, rerun the script (it reuses the existing CA, so
+devices don't need a new root), copy the two files over, and run
+`docker compose -f deploy/docker-compose.yml restart nginx`. Add a calendar
+reminder for about 11 months out.
+
+### 3. Trust the root CA on each device
+
+Send `~/.journal-ca/ca.pem` to the device, then:
+
+- **iOS:** open the file and install the profile (Settings → General → VPN &
+  Device Management), then turn it on under Settings → General → About →
+  Certificate Trust Settings ("Enable full trust for root certificates").
+- **Android:** Settings → Security → Encryption & credentials → Install a
+  certificate → CA certificate (menu names vary by vendor).
+- **macOS/Windows/Linux browsers:** import `ca.pem` into the system trust store
+  (Keychain Access → set to Always Trust; Windows: Trusted Root Certification
+  Authorities). Chrome and Safari use it. **Firefox** keeps its own store:
+  Settings → Privacy & Security → Certificates → View Certificates →
+  Authorities → Import, tick "Trust this CA to identify websites".
+
+### 4. Configure and start
+
+```sh
+cp deploy/.env.example deploy/.env   # set APP_HOST, RAILS_MASTER_KEY, BACKEND_DATABASE_PASSWORD
+docker compose -f deploy/docker-compose.yml up -d --build
+```
+
+`APP_HOST` must match the hostname in the certificate. `deploy/.env` is
+gitignored; never commit it, `master.key`, or anything in `deploy/certs/`.
