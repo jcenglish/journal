@@ -120,8 +120,7 @@ every push to `main` and every PR.
 
 ## Deployment
 
-`deploy/docker-compose.yml` runs nginx, Rails, and Postgres on one machine (for
-example an old Mac on your LAN). nginx is the only published entry point
+`deploy/docker-compose.yml` runs nginx, Rails, and Postgres. nginx is the only published entry point
 (ports 80 and 443): it terminates TLS, serves the built frontend, and proxies
 `/api/` to Rails, so the browser sees a single origin. Its config is
 `deploy/nginx/nginx.conf`. See `docs/design-decisions.md` for why this is
@@ -148,8 +147,7 @@ gitignored.
 
 To reissue before expiry, rerun the script (it reuses the existing CA, so
 devices don't need a new root), copy the two files over, and run
-`docker compose -f deploy/docker-compose.yml restart nginx`. Add a calendar
-reminder for about 11 months out.
+`docker compose -f deploy/docker-compose.yml restart nginx`.
 
 ### 3. Trust the root CA on each device
 
