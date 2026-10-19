@@ -22,7 +22,7 @@ there is no password reset: losing the password means losing the data.**
 | Frontend | React 19, TypeScript, Vite, CSS Modules                       |
 | Crypto   | Web Crypto API, client-side only                              |
 | Tests    | Minitest (backend), Vitest + React Testing Library (frontend) |
-| Deploy   | Kamal (Docker)                                                |
+| Deploy   | nginx (Docker)                                                |
 
 ## Layout
 
