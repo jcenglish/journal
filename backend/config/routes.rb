@@ -10,6 +10,7 @@ Rails.application.routes.draw do
       resources :entries, only: %i[index show create update destroy]
     end
     resources :tags, only: %i[index create]
+    match "(*path)", to: "not_found#show", via: :all
   end
 
   # Reveal health status on /up that returns 200 if the app boots with no exceptions, otherwise 500.

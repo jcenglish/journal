@@ -10,6 +10,7 @@ Monorepo with two projects, each with its own `CLAUDE.md` (commands and conventi
 
 - `backend/` — Rails 8.1 API-only application (Ruby 4.0.6, PostgreSQL via `pg`, Puma).
 - `frontend/` — React 19 + TypeScript app scaffolded with Vite.
+- `deploy/` — docker compose stack for hosting; the nginx config (TLS, static files, `/api` proxy) is `deploy/nginx/nginx.conf`.
 
 Domain models, controllers, routes, and components are being built incrementally, one vertical slice per GitHub issue (see Workflow below). The data model and conventions describe the target shape — implement against them even before every piece exists yet.
 

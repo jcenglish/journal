@@ -244,6 +244,19 @@ A running record of technical decisions, why they were made, and what was consid
 - **Alternatives considered:** Custom discriminated-union stack (zero dependencies, best typing, but loses the back gesture without extra work). React Router (heavier, same string-param issue).
 - **Status:** Decided
 
+### 2026-10-16 — Hosting: nginx with a private CA on a home machine, via docker compose
+
+- **Decision:** `deploy/docker-compose.yml` runs Postgres, the Rails image, and an nginx image that bakes in the built frontend. nginx is the single entry point: TLS termination, static files with SPA fallback, and `/api/` proxied to Rails with `X-Forwarded-Proto` so `assume_ssl`/`force_ssl` and Secure cookies work. Its config is `deploy/nginx/nginx.conf`. TLS uses a private CA created by `deploy/scripts/issue-cert.sh` on the developer machine; only the leaf cert and key reach the server. HSTS is a short `max-age=300` until the setup has proven stable.
+- **Context:** The app needs a secure context (WebCrypto, Secure cookie) even on a LAN address, and serving the frontend and API from one origin is the CSRF posture's stated collapse condition (see the CSRF entry above). The goal is to avoid a monthly hosting fee.
+- **Alternatives considered:**
+  - _Caddy_ — simpler, but nginx is more common in production and the certificate flow is part of the learning goal.
+  - _Traefik_ — more machinery than one host needs.
+  - _kamal-proxy alone_ — wants ports 80/443 and obtains certificates over the Let's Encrypt HTTP challenge, which can't work for a private home address. Kamal is not used for this host; `config/deploy.yml` stays the stock template until a real hosting decision.
+  - _Let's Encrypt DNS-01 via certbot_ — a trusted cert with no device setup, but needs a registered domain and a DNS API token. Rejected for now to keep the LAN setup free of external dependencies.
+- **Trade-off accepted:** Every device has to install and trust the root CA (iOS needs the extra full-trust step). The leaf is issued for 365 days because Apple platforms reject longer-lived certificates, so it must be reissued yearly. The CA key stays off the server and out of the repo; losing it means reissuing and reinstalling the root on every device.
+- **Home-network DNS:** the hostname resolves to the server's LAN IP through the router's local DNS (or a hosts-file entry); both the hostname and the IP are in the certificate's SANs.
+- **Status:** Decided
+
 ---
 
 ## Open Questions
