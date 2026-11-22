@@ -8,7 +8,7 @@ For the reasoning behind the architectural decisions below (why zero-knowledge o
 
 Monorepo with two projects, each with its own `CLAUDE.md` (commands and conventions) that loads when you work in that directory:
 
-- `backend/` — Rails 8.1 API-only application (Ruby 4.0.6, PostgreSQL via `pg`, Puma).
+- `backend/` — Rails 8.1 API-only application (Ruby 4.0.10, PostgreSQL via `pg`, Puma).
 - `frontend/` — React 19 + TypeScript app scaffolded with Vite.
 - `deploy/` — docker compose stack for hosting; the nginx config (TLS, static files, `/api` proxy) is `deploy/nginx/nginx.conf`.
 

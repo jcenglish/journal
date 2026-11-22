@@ -17,7 +17,7 @@ there is no password reset: losing the password means losing the data.**
 
 | Layer    | Choice                                                        |
 | -------- | ------------------------------------------------------------- |
-| Backend  | Rails 8.1 (`api_only`), Ruby 4.0.6, Puma                      |
+| Backend  | Rails 8.1 (`api_only`), Ruby 4.0.10, Puma                      |
 | Database | PostgreSQL 18                                                 |
 | Frontend | React 19, TypeScript, Vite, CSS Modules                       |
 | Crypto   | Web Crypto API, client-side only                              |
@@ -35,7 +35,7 @@ deploy/     production-style stack: nginx (HTTPS), Rails, Postgres
 
 ## Prerequisites
 
-- Ruby 4.0.6 (see `backend/.ruby-version`)
+- Ruby 4.0.10 (see `backend/.ruby-version`)
 - Node 22 (see `frontend/.nvmrc`)
 - Docker, for the local Postgres
 
